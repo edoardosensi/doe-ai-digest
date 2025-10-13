@@ -87,7 +87,7 @@ const Auth = () => {
 
       toast({
         title: "Registrazione completata!",
-        description: "Benvenuto su doe.onl",
+        description: "Controlla la tua email per confermare la registrazione.",
       });
     } catch (error: any) {
       toast({
@@ -99,6 +99,38 @@ const Auth = () => {
       setLoading(false);
     }
   };
+
+  const handlePasswordReset = async () => {
+    if (!email) {
+      toast({
+        title: "Inserisci la tua email",
+        description: "Devi inserire la tua email per reimpostare la password.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/`,
+      });
+      if (error) throw error;
+      toast({
+        title: "Email inviata",
+        description: "Controlla la tua casella di posta per le istruzioni.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Errore",
+        description: error.message || "Impossibile reimpostare la password.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-secondary/20 to-primary/10 p-4">
@@ -144,6 +176,9 @@ const Auth = () => {
                 </div>
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? "Accesso in corso..." : "Accedi"}
+                </Button>
+                <Button variant="link" type="button" onClick={handlePasswordReset} className="w-full" disabled={loading}>
+                  Hai dimenticato la password?
                 </Button>
               </form>
             </TabsContent>
