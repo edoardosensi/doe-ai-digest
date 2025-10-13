@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -12,9 +12,36 @@ const ResetPassword = () => {
   const { toast } = useToast();
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    // Supabase client automatically handles the session from the URL hash.
+    // We listen for the PASSWORD_RECOVERY event to confirm authentication.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY' && session) {
+        setIsAuthenticated(true);
+        toast({
+          title: "Autenticato",
+          description: "Ora puoi inserire la tua nuova password.",
+        });
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [toast]);
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isAuthenticated) {
+      toast({
+        title: "Errore",
+        description: "Autenticazione non completata. Prova a ricaricare la pagina o a usare di nuovo il link.",
+        variant: "destructive",
+      });
+      return;
+    }
     setLoading(true);
 
     const { error } = await supabase.auth.updateUser({ password });
@@ -22,18 +49,22 @@ const ResetPassword = () => {
     if (error) {
       toast({
         title: "Errore",
-        description: error.message || "Impossibile reimpostare la password.",
+        description: error.message || "Impossibile reimpostare la password. Il link potrebbe essere scaduto.",
         variant: "destructive",
       });
+      setLoading(false);
     } else {
       toast({
         title: "Password aggiornata",
-        description: "La tua password è stata aggiornata con successo.",
+        description: "La tua password è stata aggiornata con successo. Verrai reindirizzato alla pagina di accesso.",
       });
-      navigate("/");
+      
+      // Sign out the user from the recovery session and redirect
+      await supabase.auth.signOut();
+      setTimeout(() => {
+        navigate("/auth");
+      }, 3000);
     }
-
-    setLoading(false);
   };
 
   return (
@@ -53,11 +84,17 @@ const ResetPassword = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                disabled={!isAuthenticated}
               />
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button type="submit" className="w-full" disabled={loading || !isAuthenticated}>
               {loading ? "Reimpostazione in corso..." : "Reimposta Password"}
             </Button>
+            {!isAuthenticated && (
+              <p className="text-sm text-center text-muted-foreground pt-2">
+                In attesa di verifica dal link ricevuto via email...
+              </p>
+            )}
           </form>
         </CardContent>
       </Card>
