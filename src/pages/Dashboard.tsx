@@ -197,11 +197,11 @@ const Dashboard = () => {
       <main className="container mx-auto px-4 py-6 max-w-7xl">
         {/* Testata stile giornale */}
         <div className="mb-8 pb-6 border-b-2 border-primary">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex flex-col gap-4">
             <div className="flex items-center gap-4 text-center sm:text-left">
               <Newspaper className="w-10 h-10 sm:w-12 sm:h-12 text-primary flex-shrink-0" />
               <div>
-                <h1 className="text-4xl sm:text-5xl md:text-6xl font-heading font-bold tracking-tight">
+                <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-heading font-bold tracking-tight break-words">
                   Doe
                 </h1>
                 <p className="text-xs sm:text-sm text-muted-foreground mt-1 italic">
@@ -218,7 +218,7 @@ const Dashboard = () => {
               onClick={loadRecommendedArticles}
               disabled={generating}
               size="lg"
-              className="gap-2 w-full sm:w-auto"
+              className="gap-2 w-full sm:w-auto sm:self-end"
             >
               <RefreshCw className={`h-4 w-4 ${generating ? 'animate-spin' : ''}`} />
               {generating ? 'Generazione...' : 'Rigenera'}

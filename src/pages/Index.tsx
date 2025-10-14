@@ -107,10 +107,10 @@ const Index = () => {
           <div className="flex items-center justify-center gap-3 mb-4">
             <Newspaper className="w-12 h-12 text-primary" />
           </div>
-          <h1 className="text-5xl sm:text-6xl md:text-7xl font-heading font-bold tracking-tight text-foreground break-words">
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-heading font-bold tracking-tight text-foreground break-words px-4">
             Doe
           </h1>
-          <p className="text-sm text-muted-foreground italic">
+          <p className="text-sm text-muted-foreground italic px-4">
             Il tuo assistente AI per scoprire articoli interessanti
           </p>
         </div>
