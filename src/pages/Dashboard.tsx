@@ -228,18 +228,18 @@ const Dashboard = () => {
             <p className="text-lg text-muted-foreground font-serif">Caricamento notizie in corso...</p>
           </div>
         ) : articles.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8 items-start">
             {categories.map((category) => {
               const categoryArticles = categorizedArticles[category];
               
               return (
                 <div key={category} className="flex flex-col">
-                  <div className="sticky top-4 z-10 bg-background/95 backdrop-blur pb-4 mb-4 border-b-2 border-primary">
+                  <div className="pb-4 mb-6 border-b-2 border-primary">
                     <h2 className="text-xl sm:text-2xl font-heading font-bold uppercase tracking-tight">
                       {category}
                     </h2>
                   </div>
-                  <div className="space-y-6 flex-1">
+                  <div className="space-y-6">
                     {categoryArticles.slice(0, 4).map((article) => (
                       <ArticleCard
                         key={article.id}
