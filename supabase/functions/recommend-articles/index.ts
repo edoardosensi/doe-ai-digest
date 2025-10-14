@@ -212,7 +212,18 @@ Restituisci SOLO questo JSON (senza markdown):
               content: `Categorizza questi articoli nelle categorie abilitate dall'utente: ${enabledSections.join(', ')}
 
 Analizza ATTENTAMENTE il titolo e la descrizione di ogni articolo per determinare la categoria corretta.
-Seleziona ESATTAMENTE 4 articoli per ogni categoria. Se ci sono pochi articoli per una categoria, ripeti i migliori disponibili.
+
+REGOLE SPECIALI PER "Filosofia":
+- Assegna questa categoria SOLO ad articoli che trattano ESPLICITAMENTE di:
+  * Filosofi e pensatori (Platone, Aristotele, Kant, Nietzsche, ecc.)
+  * Correnti filosofiche (stoicismo, esistenzialismo, fenomenologia, ecc.)
+  * Concetti filosofici profondi (etica, metafisica, epistemologia, ontologia)
+  * Dibattiti filosofici contemporanei
+  * Storia della filosofia
+- NON assegnare a "Filosofia" articoli generici su politica, cultura o attualità, anche se menzionano "pensiero" o "riflessione"
+- Se non ci sono articoli veramente filosofici, NON inventare - lascia la categoria vuota o con meno di 4 articoli
+
+Seleziona ESATTAMENTE 4 articoli per ogni categoria (tranne "Filosofia" che può averne meno se non ci sono contenuti adatti).
 
 ARTICOLI DISPONIBILI:
 ${allArticles.map(a => `URL: ${a.url}\nTitolo: ${a.title}\nDescrizione: ${a.description || 'N/A'}\n---`).join('\n')}
@@ -257,7 +268,7 @@ Restituisci SOLO questo JSON (senza markdown):
             'Sport': ['calcio', 'tennis', 'serie a', 'champions', 'milan', 'inter', 'juventus'],
             'Cultura': ['cinema', 'film', 'teatro', 'musica', 'arte', 'festival'],
             'Roma': ['roma', 'campidoglio', 'comune', 'gualtieri'],
-            'Filosofia': ['filosofia', 'filosofo', 'pensiero'],
+            'Filosofia': ['filosofia', 'filosofo', 'filosofica', 'filosofico', 'platone', 'aristotele', 'kant', 'nietzsche', 'hegel', 'cartesio', 'stoicismo', 'esistenzialismo', 'fenomenologia', 'etica', 'metafisica', 'epistemologia', 'ontologia'],
             'Scienza': ['scienza', 'ricerca', 'studio', 'scoperta'],
             'Televisione': ['televisione', 'tv', 'rai', 'mediaset'],
             'Stampa internazionale': ['internazionale', 'esteri', 'mondo']
@@ -305,7 +316,7 @@ Restituisci SOLO questo JSON (senza markdown):
           'Sport': ['calcio', 'tennis', 'serie a', 'champions', 'milan', 'inter', 'juventus'],
           'Cultura': ['cinema', 'film', 'teatro', 'musica', 'arte', 'festival'],
           'Roma': ['roma', 'campidoglio', 'comune', 'gualtieri'],
-          'Filosofia': ['filosofia', 'filosofo', 'pensiero'],
+          'Filosofia': ['filosofia', 'filosofo', 'filosofica', 'filosofico', 'platone', 'aristotele', 'kant', 'nietzsche', 'hegel', 'cartesio', 'stoicismo', 'esistenzialismo', 'fenomenologia', 'etica', 'metafisica', 'epistemologia', 'ontologia'],
           'Scienza': ['scienza', 'ricerca', 'studio', 'scoperta'],
           'Televisione': ['televisione', 'tv', 'rai', 'mediaset'],
           'Stampa internazionale': ['internazionale', 'esteri', 'mondo']
