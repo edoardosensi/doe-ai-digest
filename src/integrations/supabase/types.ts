@@ -169,6 +169,38 @@ export type Database = {
           },
         ]
       }
+      user_feed_preferences: {
+        Row: {
+          created_at: string | null
+          enabled: boolean | null
+          feed_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          enabled?: boolean | null
+          feed_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          enabled?: boolean | null
+          feed_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_feed_preferences_feed_id_fkey"
+            columns: ["feed_id"]
+            isOneToOne: false
+            referencedRelation: "rss_feeds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_rss_feeds: {
         Row: {
           created_at: string | null

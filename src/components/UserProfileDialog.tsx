@@ -1,6 +1,6 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
 import { Button } from "./ui/button";
-import { MessageSquare, Sparkles, Plus, X, Newspaper } from "lucide-react";
+import { Circle, Plus, X, Newspaper, ToggleLeft, ToggleRight } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -23,12 +23,18 @@ interface RssFeed {
   enabled: boolean;
 }
 
+interface FeedPreference {
+  feed_id: string;
+  enabled: boolean;
+}
+
 export const UserProfileDialog = ({ userProfile, userId }: UserProfileDialogProps) => {
   const { toast } = useToast();
   const [customProfile, setCustomProfile] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [defaultFeeds, setDefaultFeeds] = useState<RssFeed[]>([]);
   const [userFeeds, setUserFeeds] = useState<RssFeed[]>([]);
+  const [feedPreferences, setFeedPreferences] = useState<Record<string, boolean>>({});
   const [newFeedUrl, setNewFeedUrl] = useState("");
   const [newFeedName, setNewFeedName] = useState("");
   const [isAddingFeed, setIsAddingFeed] = useState(false);
@@ -65,6 +71,20 @@ export const UserProfileDialog = ({ userProfile, userId }: UserProfileDialogProp
       .eq('is_default', true);
     
     if (defaultData) setDefaultFeeds(defaultData);
+
+    // Load user preferences for default feeds
+    const { data: prefsData } = await supabase
+      .from('user_feed_preferences')
+      .select('feed_id, enabled')
+      .eq('user_id', userId);
+    
+    if (prefsData) {
+      const prefs: Record<string, boolean> = {};
+      prefsData.forEach((p: FeedPreference) => {
+        prefs[p.feed_id] = p.enabled;
+      });
+      setFeedPreferences(prefs);
+    }
 
     // Load user custom feeds
     const { data: userData } = await supabase
@@ -142,6 +162,51 @@ export const UserProfileDialog = ({ userProfile, userId }: UserProfileDialogProp
     }
   };
 
+  const toggleDefaultFeed = async (feedId: string, currentEnabled: boolean) => {
+    try {
+      const newEnabled = !currentEnabled;
+      
+      // Check if preference already exists
+      const { data: existing } = await supabase
+        .from('user_feed_preferences')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('feed_id', feedId)
+        .single();
+
+      if (existing) {
+        // Update existing preference
+        const { error } = await supabase
+          .from('user_feed_preferences')
+          .update({ enabled: newEnabled })
+          .eq('user_id', userId)
+          .eq('feed_id', feedId);
+        
+        if (error) throw error;
+      } else {
+        // Create new preference
+        const { error } = await supabase
+          .from('user_feed_preferences')
+          .insert({ user_id: userId, feed_id: feedId, enabled: newEnabled });
+        
+        if (error) throw error;
+      }
+
+      setFeedPreferences({ ...feedPreferences, [feedId]: newEnabled });
+      
+      toast({
+        title: newEnabled ? "Feed attivato" : "Feed disattivato",
+        description: newEnabled ? "Il feed è stato attivato" : "Il feed è stato disattivato",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Errore",
+        description: "Impossibile modificare il feed",
+        variant: "destructive",
+      });
+    }
+  };
+
   const deleteFeed = async (feedId: string) => {
     try {
       const { error } = await supabase
@@ -171,14 +236,22 @@ export const UserProfileDialog = ({ userProfile, userId }: UserProfileDialogProp
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="icon">
-          <Sparkles className="h-5 w-5" />
+        <Button variant="ghost" size="icon" className="relative">
+          <div className="flex items-center gap-0.5">
+            <Circle className="h-3 w-3 fill-primary text-primary" />
+            <Circle className="h-3 w-3 fill-primary text-primary" />
+            <Circle className="h-3 w-3 fill-primary text-primary" />
+          </div>
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-2xl max-h-[80vh]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-primary" />
+            <div className="flex items-center gap-0.5">
+              <Circle className="h-4 w-4 fill-primary text-primary" />
+              <Circle className="h-4 w-4 fill-primary text-primary" />
+              <Circle className="h-4 w-4 fill-primary text-primary" />
+            </div>
             Il Tuo Profilo AI
           </DialogTitle>
         </DialogHeader>
@@ -222,16 +295,35 @@ export const UserProfileDialog = ({ userProfile, userId }: UserProfileDialogProp
                   <Newspaper className="h-4 w-4" />
                   Giornali di Default
                 </h3>
-                <ScrollArea className="h-[150px] w-full rounded-md border p-4">
+                <ScrollArea className="h-[200px] w-full rounded-md border p-4">
                   <div className="space-y-2">
-                    {defaultFeeds.map((feed) => (
-                      <div key={feed.id} className="flex items-center justify-between text-sm">
-                        <span className="font-medium">{feed.name}</span>
-                        <span className="text-xs text-muted-foreground truncate max-w-[200px]">
-                          {feed.url}
-                        </span>
-                      </div>
-                    ))}
+                    {defaultFeeds.map((feed) => {
+                      const isEnabled = feedPreferences[feed.id] !== false;
+                      return (
+                        <div key={feed.id} className="flex items-center justify-between text-sm group">
+                          <div className="flex-1 min-w-0">
+                            <span className={`font-medium block ${!isEnabled ? 'text-muted-foreground line-through' : ''}`}>
+                              {feed.name}
+                            </span>
+                            <span className="text-xs text-muted-foreground truncate block">
+                              {feed.url}
+                            </span>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => toggleDefaultFeed(feed.id, isEnabled)}
+                          >
+                            {isEnabled ? (
+                              <ToggleRight className="h-5 w-5 text-primary" />
+                            ) : (
+                              <ToggleLeft className="h-5 w-5 text-muted-foreground" />
+                            )}
+                          </Button>
+                        </div>
+                      );
+                    })}
                   </div>
                 </ScrollArea>
               </div>
