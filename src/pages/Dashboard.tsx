@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Navbar } from "@/components/Navbar";
 import { ArticleCard } from "@/components/ArticleCard";
 import { Button } from "@/components/ui/button";
-import { Loader2, Sparkles, Newspaper } from "lucide-react";
+import { Loader2, RefreshCw, Newspaper } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Separator } from "@/components/ui/separator";
 
@@ -171,61 +171,60 @@ const Dashboard = () => {
     <div className="min-h-screen bg-background">
       <Navbar user={user} />
       
-      <main className="container mx-auto px-4 pt-20 pb-12">
-        {/* Testata Giornalistica */}
-        <div className="border-y-4 border-foreground py-6 mb-8">
-          <div className="text-center space-y-2">
-            <div className="flex items-center justify-center gap-3">
-              <Separator className="flex-1 bg-foreground" />
-              <Newspaper className="h-8 w-8 text-foreground" />
-              <Separator className="flex-1 bg-foreground" />
+      <main className="container mx-auto px-4 py-6 max-w-7xl">
+        {/* Testata moderna */}
+        <div className="mb-8 pb-6 border-b-2 border-primary">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Newspaper className="w-12 h-12 text-primary" />
+              <div>
+                <h1 className="text-5xl font-bold tracking-tight">
+                  IL QUOTIDIANO
+                </h1>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {new Date().toLocaleDateString('it-IT', { 
+                    weekday: 'long', 
+                    day: 'numeric', 
+                    month: 'long', 
+                    year: 'numeric' 
+                  }).toUpperCase()}
+                </p>
+              </div>
             </div>
-            <h1 className="text-6xl font-serif font-black text-foreground tracking-tight" style={{ fontFamily: 'Georgia, serif' }}>
-              DOE.ONL
-            </h1>
-            <p className="text-sm font-serif italic text-muted-foreground">
-              {new Date().toLocaleDateString('it-IT', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-            </p>
-            <div className="flex items-center justify-center gap-3">
-              <Separator className="flex-1 bg-foreground" />
-              <span className="text-xs font-serif text-muted-foreground">★ EDIZIONE PERSONALIZZATA ★</span>
-              <Separator className="flex-1 bg-foreground" />
-            </div>
+            <Button
+              onClick={loadRecommendedArticles}
+              disabled={generating}
+              size="lg"
+              className="gap-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${generating ? 'animate-spin' : ''}`} />
+              Aggiorna
+            </Button>
           </div>
         </div>
 
-        {/* Pulsante Aggiorna */}
-        <div className="flex justify-center mb-8">
-          <Button 
-            onClick={loadRecommendedArticles}
-            disabled={generating}
-            variant="outline"
-            className="gap-2 border-2 border-foreground font-serif"
-          >
-            {generating ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Sparkles className="h-4 w-4" />
-            )}
-            Aggiorna Notizie
-          </Button>
-        </div>
-
-        {articles.length > 0 ? (
-          <div className="space-y-12">
-            {/* Sezioni Principali */}
+        {generating ? (
+          <div className="text-center py-20">
+            <RefreshCw className="w-12 h-12 animate-spin mx-auto mb-4 text-muted-foreground" />
+            <p className="text-lg text-muted-foreground">Caricamento notizie in corso...</p>
+          </div>
+        ) : articles.length > 0 ? (
+          <div className="space-y-16">
+            {/* Sezioni principali - Layout a griglia moderna */}
             {mainCategories.map((category) => {
               const categoryArticles = categorizedArticles[category];
               if (categoryArticles.length === 0) return null;
               
               return (
-                <section key={category} className="space-y-4">
-                  <div className="border-b-2 border-foreground pb-2">
-                    <h2 className="text-3xl font-serif font-bold text-foreground uppercase tracking-wide">
+                <section key={category} className="animate-fade-in">
+                  <div className="flex items-center gap-4 mb-8">
+                    <div className="h-1 w-12 bg-accent"></div>
+                    <h2 className="text-4xl font-bold uppercase tracking-tight">
                       {category}
                     </h2>
+                    <div className="h-px flex-1 bg-border"></div>
                   </div>
-                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     {categoryArticles.slice(0, 3).map((article) => (
                       <ArticleCard
                         key={article.id}
@@ -240,38 +239,41 @@ const Dashboard = () => {
               );
             })}
 
-            {/* Altre Sezioni */}
-            {['Tecnologia', 'Cultura', 'Altro'].map((category) => {
-              const categoryArticles = categorizedArticles[category];
-              if (categoryArticles.length === 0) return null;
-              
-              return (
-                <section key={category} className="space-y-4">
-                  <div className="border-b border-foreground pb-2">
-                    <h3 className="text-2xl font-serif font-bold text-foreground uppercase">
-                      {category}
-                    </h3>
-                  </div>
-                  <div className="grid md:grid-cols-2 gap-4">
-                    {categoryArticles.slice(0, 2).map((article) => (
-                      <ArticleCard
-                        key={article.id}
-                        {...article}
-                        image_url={article.image_url}
-                        onSave={() => handleSaveArticle(article)}
-                        onClick={() => handleArticleClick(article)}
-                      />
-                    ))}
-                  </div>
-                </section>
-              );
-            })}
+            {/* Sezioni secondarie - Layout più compatto */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
+              {['Tecnologia', 'Cultura', 'Altro'].map((category) => {
+                const categoryArticles = categorizedArticles[category];
+                if (categoryArticles.length === 0) return null;
+                
+                return (
+                  <section key={category} className="animate-fade-in">
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="h-px w-8 bg-accent"></div>
+                      <h2 className="text-2xl font-bold uppercase tracking-tight">
+                        {category}
+                      </h2>
+                    </div>
+                    <div className="space-y-6">
+                      {categoryArticles.slice(0, 2).map((article) => (
+                        <ArticleCard
+                          key={article.id}
+                          {...article}
+                          image_url={article.image_url}
+                          onSave={() => handleSaveArticle(article)}
+                          onClick={() => handleArticleClick(article)}
+                        />
+                      ))}
+                    </div>
+                  </section>
+                );
+              })}
+            </div>
           </div>
         ) : (
-          <div className="text-center py-12 space-y-4 border-2 border-dashed border-foreground/30 rounded p-8">
+          <div className="text-center py-20 space-y-4">
             <Newspaper className="h-16 w-16 mx-auto text-muted-foreground" />
-            <p className="text-lg font-serif text-foreground">
-              {generating ? "Caricamento delle notizie in corso..." : "Nessuna notizia disponibile al momento"}
+            <p className="text-lg text-muted-foreground">
+              Nessuna notizia disponibile al momento
             </p>
           </div>
         )}

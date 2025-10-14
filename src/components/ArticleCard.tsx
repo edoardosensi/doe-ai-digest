@@ -30,48 +30,60 @@ export const ArticleCard = ({
   };
 
   return (
-    <Card className="group hover:shadow-xl transition-all duration-300 border-2 border-foreground/20 hover:border-foreground/40 overflow-hidden bg-card">
+    <Card 
+      className="group overflow-hidden cursor-pointer hover:shadow-strong transition-all duration-300 border border-border bg-card"
+      onClick={handleCardClick}
+    >
       {image_url && (
-        <div 
-          className="w-full h-40 bg-cover bg-center cursor-pointer border-b-2 border-foreground/20" 
-          style={{ backgroundImage: `url(${image_url})` }}
-          onClick={handleCardClick}
-        />
-      )}
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex-1 cursor-pointer" onClick={handleCardClick}>
-            <CardTitle className="text-base font-serif font-bold leading-tight line-clamp-3 group-hover:text-primary transition-colors">
-              {title}
-            </CardTitle>
-            {source && (
-              <p className="text-xs font-serif italic text-muted-foreground mt-1 uppercase">{source}</p>
-            )}
-          </div>
+        <div className="w-full h-56 overflow-hidden relative">
+          <img 
+            src={image_url} 
+            alt={title}
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
         </div>
-        <CardDescription className="line-clamp-2 mt-2 text-sm font-serif cursor-pointer" onClick={handleCardClick}>
-          {description}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="flex gap-2 pt-0">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleCardClick}
-          className="flex-1 font-serif border-foreground/30"
-        >
-          <ExternalLink className="mr-2 h-3 w-3" />
-          Leggi
-        </Button>
-        {showSaveButton && onSave && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onSave}
-          >
-            <Bookmark className="h-3 w-3" />
-          </Button>
+      )}
+      <CardHeader className="pb-3 space-y-2">
+        {source && (
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-accent uppercase tracking-widest">
+              {source}
+            </span>
+            <span className="text-xs text-muted-foreground">•</span>
+            <span className="text-xs text-muted-foreground">Oggi</span>
+          </div>
         )}
+        <CardTitle className="text-2xl font-bold leading-tight line-clamp-3 group-hover:text-accent transition-colors duration-200">
+          {title}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <p className="text-sm text-muted-foreground line-clamp-3 leading-relaxed">
+          {description}
+        </p>
+        <div className="flex gap-2 pt-2">
+          <Button 
+            variant="default" 
+            size="sm"
+            className="font-semibold"
+            onClick={handleCardClick}
+          >
+            Leggi l'articolo
+          </Button>
+          {showSaveButton && onSave && (
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                onSave();
+              }}
+            >
+              <Bookmark className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
       </CardContent>
     </Card>
   );
