@@ -7,28 +7,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const RSS_FEEDS = {
-  // News generali
-  'Repubblica': 'https://www.repubblica.it/rss/homepage/rss2.0.xml',
-  'Corriere della Sera': 'https://www.corriere.it/rss/homepage.xml',
-  'ANSA': 'https://www.ansa.it/sito/ansait_rss.xml',
-  
-  // Sport
-  'Repubblica Sport': 'https://www.repubblica.it/rss/sport/rss2.0.xml',
-  'Corriere Sport': 'https://www.corriere.it/rss/sport.xml',
-  'La Gazzetta dello Sport': 'https://www.gazzetta.it/rss/home.xml',
-  'Sky Sport': 'https://sport.sky.it/rss/sport.xml',
-  
-  // Cultura e Spettacoli
-  'Repubblica Spettacoli': 'https://www.repubblica.it/rss/spettacoli/rss2.0.xml',
-  'Corriere Spettacoli': 'https://www.corriere.it/rss/spettacoli.xml',
-  'ANSA Cultura': 'https://www.ansa.it/sito/notizie/cultura/cultura_rss.xml',
-  
-  // Politica
-  'ANSA Politica': 'https://www.ansa.it/sito/notizie/politica/politica_rss.xml',
-  'Repubblica Politica': 'https://www.repubblica.it/rss/politica/rss2.0.xml',
-};
-
 interface Article {
   title: string;
   description: string;
@@ -97,11 +75,33 @@ serve(async (req) => {
 
     console.log('Fetching articles from RSS feeds...');
     
+    // Load RSS feeds from database
+    const { data: rssFeeds, error: feedsError } = await supabaseClient
+      .from('rss_feeds')
+      .select('name, url')
+      .eq('enabled', true)
+      .eq('is_default', true);
+    
+    if (feedsError) {
+      console.error('Error loading RSS feeds:', feedsError);
+      throw feedsError;
+    }
+    
+    if (!rssFeeds || rssFeeds.length === 0) {
+      console.log('No RSS feeds found');
+      return new Response(
+        JSON.stringify({ success: true, count: 0 }), 
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    console.log(`Loading ${rssFeeds.length} RSS feeds`);
+    
     const allArticles: Article[] = [];
     
     // Fetch from all RSS feeds in parallel
-    const fetchPromises = Object.entries(RSS_FEEDS).map(([source, url]) => 
-      parseRSSFeed(url, source)
+    const fetchPromises = rssFeeds.map(feed => 
+      parseRSSFeed(feed.url, feed.name)
     );
     
     const results = await Promise.all(fetchPromises);

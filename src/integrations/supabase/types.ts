@@ -87,6 +87,7 @@ export type Database = {
           id: string
           is_default: boolean | null
           name: string
+          section_name: string | null
           updated_at: string | null
           url: string
         }
@@ -96,6 +97,7 @@ export type Database = {
           id?: string
           is_default?: boolean | null
           name: string
+          section_name?: string | null
           updated_at?: string | null
           url: string
         }
@@ -105,6 +107,7 @@ export type Database = {
           id?: string
           is_default?: boolean | null
           name?: string
+          section_name?: string | null
           updated_at?: string | null
           url?: string
         }
