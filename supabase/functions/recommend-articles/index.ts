@@ -61,10 +61,10 @@ serve(async (req) => {
       .order('clicked_at', { ascending: false })
       .limit(20);
 
-    // Get user's interests from profile
+    // Get user's interests and existing profile from profile
     const { data: profile } = await supabaseClient
       .from('profiles')
-      .select('interests')
+      .select('interests, custom_profile')
       .eq('user_id', user.id)
       .single();
 
@@ -84,8 +84,12 @@ serve(async (req) => {
 
     let recommendedArticles = [];
 
-    if (clicks && clicks.length >= 5) {
-      // User has enough history - use AI to recommend
+    // Always try to use AI for recommendations if there are ANY clicks
+    if (clicks && clicks.length > 0) {
+      // Get existing profile to enhance it
+      const existingProfile = profile?.custom_profile || null;
+      
+      // User has click history - use AI to build/update profile and recommend
       const clickedArticlesInfo = clicks
         .map((c: any) => `${c.articles.title} (${c.articles.source})`)
         .join(', ');
@@ -101,39 +105,51 @@ serve(async (req) => {
           messages: [
             { 
               role: 'system', 
-              content: 'Sei un esperto giornalista italiano specializzato nella categorizzazione di notizie e nella profilazione dei lettori. Devi analizzare attentamente gli articoli letti dall\'utente per comprendere i suoi interessi profondi e selezionare contenuti perfettamente allineati.'
+              content: 'Sei "LA BOLLA" - un intelligenza artificiale avanzata che costruisce e affina continuamente il profilo psicologico del lettore. Sei un esperto di neuroscienze cognitive, psicologia dei consumi mediatici, e giornalismo. Il tuo compito è creare una "bolla informativa personalizzata" sempre più precisa ad ogni interazione.'
             },
             { 
               role: 'user', 
-              content: `STORICO LETTURE UTENTE: ${clickedArticlesInfo}
+              content: `🧠 LA MIA BOLLA - SISTEMA DI PROFILAZIONE AVANZATA
 
-COMPITO: Analizza i pattern negli articoli che l'utente ha letto e:
-1. Crea un profilo dettagliato e acuto dell'utente (3-4 righe) che descriva:
-   - I suoi interessi specifici
-   - Il tipo di approfondimento che cerca (notizie veloci vs analisi)
-   - I temi ricorrenti che lo attraggono
-   - Lo stile di giornalismo che preferisce
+${existingProfile ? `PROFILO ESISTENTE DA AGGIORNARE:\n${existingProfile}\n\n` : ''}STORICO COMPLETO LETTURE (ultimi ${clicks.length} click):
+${clickedArticlesInfo}
 
-2. Seleziona ESATTAMENTE 4 articoli per ogni categoria che MEGLIO si allineano al profilo.
-   Le categorie disponibili sono: ${enabledSections.join(', ')}
+🎯 MISSIONE:
+1. ANALIZZA PROFONDAMENTE i pattern di lettura:
+   - Quali TEMI specifici ricorrono? (non solo categorie, ma sottoargomenti precisi)
+   - Quale ANGOLAZIONE preferisce? (tecnica, emotiva, politica, internazionale)
+   - Quale COMPLESSITÀ cerca? (analisi profonde, breaking news, curiosità)
+   - Quali FONTI predilige? (mainstream, alternativi, esteri)
+   - PATTERN TEMPORALI: quando clicca cosa? (progressione interessi)
+   - CORRELAZIONI NASCOSTE: quali temi si legano tra loro nei suoi interessi?
 
-CRITERI DI SELEZIONE:
-- Priorità assoluta: articoli che matchano gli interessi dimostrati nei click
-- Analizza titolo E descrizione per categorizzare correttamente
-- Evita articoli troppo generici, cerca quelli con un taglio specifico
-- Bilancia tra continuità (temi già letti) e scoperta (nuovi angoli correlati)
+2. COSTRUISCI/AGGIORNA "LA BOLLA" (profilo utente di 5-7 righe):
+   ${existingProfile ? '- INTEGRA il profilo esistente con nuove intuizioni dai click recenti' : '- CREA un profilo dettagliato iniziale'}
+   - Usa linguaggio psicologico preciso e concreto
+   - Identifica NON solo "cosa" legge, ma "perché" (motivazioni profonde)
+   - Prevedi evoluzione interessi futuri
+   - Sii specifico: nomi, temi precisi, non genericità
+
+3. SELEZIONA ARTICOLI PERFETTI:
+   Categorie: ${enabledSections.join(', ')}
+   - Scegli 4 articoli per categoria che:
+     * Matchano PRECISAMENTE il profilo psicologico
+     * Offrono sia CONTINUITÀ (interessi noti) che SCOPERTA GUIDATA (nuove prospettive correlate)
+     * Evitano ridondanza ma mantengono coerenza tematica
+   
+REGOLE SPECIALI:
+- "Filosofia": SOLO se tratta di filosofi, correnti filosofiche, concetti profondi (etica, metafisica, epistemologia). NO articoli generici.
+- Se pochi articoli per una categoria, ripeti i migliori ma SOLO se veramente rilevanti
 
 ARTICOLI DISPONIBILI:
 ${allArticles.map(a => `URL: ${a.url}\nTitolo: ${a.title}\nDescrizione: ${a.description || 'N/A'}\n---`).join('\n')}
-
-IMPORTANTE: Se ci sono pochi articoli per una categoria, ripeti i migliori disponibili.
 
 Restituisci SOLO questo JSON (senza markdown):
 {
   "articles": {
     ${enabledSections.map(s => `"${s}": ["url1", "url2", "url3", "url4"]`).join(',\n    ')}
   },
-  "userProfile": "Descrizione italiana di 3-4 righe che delinea precisamente gli interessi dell'utente basandosi sui suoi click. Usa termini specifici e concreti, non generici."
+  "userProfile": "LA BOLLA: [Profilo dettagliato 5-7 righe che descrive PRECISAMENTE la psicologia del lettore, i suoi interessi profondi, pattern nascosti, e previsioni future. Basato su ${clicks.length} click analizzati. ${existingProfile ? 'Aggiornato e raffinato dal profilo precedente.' : 'Profilo iniziale costruito.'}]"
 }`
             }
           ],

@@ -139,10 +139,21 @@ const Dashboard = () => {
         body: { articleId: article.id }
       });
       
-      console.log('Article click tracked, AI will use this to refine your bubble');
+      console.log('Click tracciato - La tua bolla si sta aggiornando...');
       
       // Open article in new tab
       window.open(article.url, '_blank');
+      
+      // Reload articles after click to update based on new preference
+      toast({
+        title: "La tua bolla si aggiorna",
+        description: "Rigenerazione articoli in base alle tue preferenze...",
+      });
+      
+      // Wait a moment for the click to be processed, then reload
+      setTimeout(() => {
+        loadRecommendedArticles();
+      }, 1000);
     } catch (error: any) {
       console.error('Error tracking click:', error);
       // Still open the article even if tracking fails
