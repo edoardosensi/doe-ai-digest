@@ -191,22 +191,22 @@ const Dashboard = () => {
       <Navbar user={user} userProfile={userProfile} />
 
       <main className="container mx-auto px-4 py-6 max-w-7xl">
-        {/* Testata moderna */}
+        {/* Testata stile giornale */}
         <div className="mb-8 pb-6 border-b-2 border-primary">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Newspaper className="w-12 h-12 text-primary" />
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-4 text-center sm:text-left">
+              <Newspaper className="w-10 h-10 sm:w-12 sm:h-12 text-primary flex-shrink-0" />
               <div>
-                <h1 className="text-5xl font-bold tracking-tight">
-                  IL QUOTIDIANO
+                <h1 className="text-4xl sm:text-5xl md:text-6xl font-heading font-bold tracking-tight">
+                  Doe
                 </h1>
-                <p className="text-sm text-muted-foreground mt-1">
+                <p className="text-xs sm:text-sm text-muted-foreground mt-1 italic">
                   {new Date().toLocaleDateString('it-IT', { 
                     weekday: 'long', 
                     day: 'numeric', 
                     month: 'long', 
                     year: 'numeric' 
-                  }).toUpperCase()}
+                  })}
                 </p>
               </div>
             </div>
@@ -214,7 +214,7 @@ const Dashboard = () => {
               onClick={loadRecommendedArticles}
               disabled={generating}
               size="lg"
-              className="gap-2"
+              className="gap-2 w-full sm:w-auto"
             >
               <RefreshCw className={`h-4 w-4 ${generating ? 'animate-spin' : ''}`} />
               {generating ? 'Generazione...' : 'Rigenera'}
@@ -225,21 +225,21 @@ const Dashboard = () => {
         {generating ? (
           <div className="text-center py-20">
             <RefreshCw className="w-12 h-12 animate-spin mx-auto mb-4 text-muted-foreground" />
-            <p className="text-lg text-muted-foreground">L'AI sta selezionando i migliori articoli per te...</p>
+            <p className="text-lg text-muted-foreground font-serif">Caricamento notizie in corso...</p>
           </div>
         ) : articles.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
             {categories.map((category) => {
               const categoryArticles = categorizedArticles[category];
               
               return (
-                <div key={category} className="space-y-6">
-                  <div className="sticky top-20 z-10 bg-background py-2">
-                    <h2 className="text-2xl font-bold uppercase tracking-tight border-b-2 border-primary pb-2">
+                <div key={category} className="flex flex-col">
+                  <div className="sticky top-4 z-10 bg-background/95 backdrop-blur pb-4 mb-4 border-b-2 border-primary">
+                    <h2 className="text-xl sm:text-2xl font-heading font-bold uppercase tracking-tight">
                       {category}
                     </h2>
                   </div>
-                  <div className="space-y-6">
+                  <div className="space-y-6 flex-1">
                     {categoryArticles.slice(0, 4).map((article) => (
                       <ArticleCard
                         key={article.id}
@@ -262,7 +262,7 @@ const Dashboard = () => {
         ) : (
           <div className="text-center py-20 space-y-4">
             <Newspaper className="h-16 w-16 mx-auto text-muted-foreground" />
-            <p className="text-lg text-muted-foreground">
+            <p className="text-lg text-muted-foreground font-serif">
               Nessuna notizia disponibile al momento
             </p>
           </div>
