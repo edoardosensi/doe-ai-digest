@@ -98,7 +98,7 @@ const Dashboard = () => {
       // First, fetch new articles from RSS feeds
       await supabase.functions.invoke('fetch-articles');
       
-      // Then get personalized recommendations
+      // Then get personalized recommendations (AI will update profile automatically)
       const { data, error } = await supabase.functions.invoke('recommend-articles');
 
       if (error) throw error;
@@ -106,6 +106,17 @@ const Dashboard = () => {
       if (data?.articles) {
         setArticles(data.articles);
         setUserProfile(data.userProfile || null);
+      }
+      
+      // Reload custom profile to get the AI-updated version
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('custom_profile')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      
+      if (profileData?.custom_profile) {
+        setUserProfile(profileData.custom_profile);
       }
     } catch (error: any) {
       console.error('Error loading articles:', error);
@@ -121,10 +132,12 @@ const Dashboard = () => {
 
   const handleArticleClick = async (article: Article) => {
     try {
-      // Track the click
+      // Track the click - this will help AI learn user preferences
       await supabase.functions.invoke('track-click', {
         body: { articleId: article.id }
       });
+      
+      console.log('Article click tracked, AI will use this to refine your bubble');
       
       // Open article in new tab
       window.open(article.url, '_blank');
@@ -204,7 +217,7 @@ const Dashboard = () => {
               className="gap-2"
             >
               <RefreshCw className={`h-4 w-4 ${generating ? 'animate-spin' : ''}`} />
-              Rigenera
+              {generating ? 'Generazione...' : 'Rigenera'}
             </Button>
           </div>
         </div>

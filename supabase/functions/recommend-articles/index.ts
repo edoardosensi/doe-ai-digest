@@ -87,48 +87,35 @@ serve(async (req) => {
           messages: [
             { 
               role: 'system', 
-              content: 'Sei un esperto giornalista italiano specializzato nella categorizzazione di notizie. Devi analizzare attentamente ogni articolo e categorizzarlo con precisione basandoti ESCLUSIVAMENTE sul contenuto del titolo e della descrizione.'
+              content: 'Sei un esperto giornalista italiano specializzato nella categorizzazione di notizie e nella profilazione dei lettori. Devi analizzare attentamente gli articoli letti dall\'utente per comprendere i suoi interessi profondi e selezionare contenuti perfettamente allineati.'
             },
             { 
               role: 'user', 
-              content: `L'utente ha letto questi articoli: ${clickedArticlesInfo}. 
+              content: `STORICO LETTURE UTENTE: ${clickedArticlesInfo}
 
-COMPITO: Dalla lista di articoli disponibili, devi selezionare ESATTAMENTE 4 articoli per ogni categoria (totale 16).
+COMPITO: Analizza i pattern negli articoli che l'utente ha letto e:
+1. Crea un profilo dettagliato e acuto dell'utente (3-4 righe) che descriva:
+   - I suoi interessi specifici
+   - Il tipo di approfondimento che cerca (notizie veloci vs analisi)
+   - I temi ricorrenti che lo attraggono
+   - Lo stile di giornalismo che preferisce
 
-CATEGORIE E CRITERI RIGIDI:
-1. "Politica" - SOLO politica italiana interna:
-   - Governo italiano, ministri italiani, parlamento italiano
-   - Partiti politici italiani, elezioni italiane
-   - Riforme, leggi italiane, questioni parlamentari
-   - NON includere: notizie internazionali, UE, NATO, accordi esteri
+2. Seleziona ESATTAMENTE 4 articoli per ogni categoria che MEGLIO si allineano al profilo:
+   - "Politica": politica italiana interna
+   - "Politica estera": politica internazionale e geopolitica
+   - "Sport": sport e competizioni
+   - "Cultura": cultura, cinema, teatro, arte, musica
 
-2. "Politica estera" - SOLO politica internazionale:
-   - Guerra, conflitti internazionali (Ucraina, Gaza, ecc.)
-   - Leaders stranieri (Biden, Putin, Xi Jinping)
-   - Organizzazioni internazionali (ONU, NATO, UE in contesto globale)
-   - Relazioni tra stati, accordi internazionali, geopolitica
-   - NON includere: politica italiana, se non in contesto internazionale
-
-3. "Sport" - SOLO sport:
-   - Calcio, tennis, basket, Formula 1, ciclismo
-   - Campionati, partite, risultati sportivi
-   - Atleti, allenatori, squadre
-   - NON includere: politica dello sport o economia dello sport
-
-4. "Cultura" - SOLO cultura e spettacolo:
-   - Cinema, teatro, musica, arte, mostre
-   - Libri, letteratura, premi letterari
-   - Festival culturali, concerti, spettacoli
-   - NON includere: cronaca culturale o politica culturale
+CRITERI DI SELEZIONE:
+- Priorità assoluta: articoli che matchano gli interessi dimostrati nei click
+- Analizza titolo E descrizione per categorizzare correttamente
+- Evita articoli troppo generici, cerca quelli con un taglio specifico
+- Bilancia tra continuità (temi già letti) e scoperta (nuovi angoli correlati)
 
 ARTICOLI DISPONIBILI:
 ${allArticles.map(a => `URL: ${a.url}\nTitolo: ${a.title}\nDescrizione: ${a.description || 'N/A'}\n---`).join('\n')}
 
-IMPORTANTE: 
-- Leggi ATTENTAMENTE titolo e descrizione di OGNI articolo
-- Se un articolo parla di più temi, usa il tema PRINCIPALE
-- Se non ci sono 4 articoli per una categoria, ripeti quelli più attinenti
-- NON mischiare le categorie
+IMPORTANTE: Se ci sono pochi articoli per una categoria, ripeti i migliori disponibili.
 
 Restituisci SOLO questo JSON (senza markdown):
 {
@@ -138,7 +125,7 @@ Restituisci SOLO questo JSON (senza markdown):
     "Sport": ["url1", "url2", "url3", "url4"],
     "Cultura": ["url1", "url2", "url3", "url4"]
   },
-  "userProfile": "Descrizione italiana di 3-4 righe degli interessi dell'utente basata sui suoi click"
+  "userProfile": "Descrizione italiana di 3-4 righe che delinea precisamente gli interessi dell'utente basandosi sui suoi click. Usa termini specifici e concreti, non generici."
 }`
             }
           ],
@@ -154,6 +141,20 @@ Restituisci SOLO questo JSON (senza markdown):
           const aiResponse = JSON.parse(content);
           const categorizedUrls = aiResponse.articles;
           const userProfile = aiResponse.userProfile;
+          
+          // Save the AI-generated profile to the database
+          if (userProfile) {
+            const { error: profileError } = await supabaseClient
+              .from('profiles')
+              .update({ custom_profile: userProfile })
+              .eq('user_id', user.id);
+            
+            if (profileError) {
+              console.error('Error updating user profile:', profileError);
+            } else {
+              console.log('User profile updated successfully');
+            }
+          }
           
           // Build categorized articles array with category tag
           const categorizedArticles = [];
