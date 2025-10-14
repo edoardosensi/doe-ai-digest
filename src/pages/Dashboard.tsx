@@ -201,7 +201,7 @@ const Dashboard = () => {
             <div className="flex items-center gap-4">
               <Newspaper className="w-10 h-10 sm:w-12 sm:h-12 text-primary flex-shrink-0" />
               <div>
-                <h1 className="text-3xl sm:text-4xl md:text-5xl font-heading font-bold tracking-tight">
+                <h1 className="text-2xl sm:text-3xl md:text-4xl font-heading font-bold tracking-tight">
                   Doe
                 </h1>
                 <p className="text-xs sm:text-sm text-muted-foreground mt-1 italic">
