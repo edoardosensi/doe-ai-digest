@@ -238,9 +238,9 @@ export const UserProfileDialog = ({ userProfile, userId }: UserProfileDialogProp
       <DialogTrigger asChild>
         <Button variant="ghost" size="icon" className="relative">
           <div className="flex items-center gap-0.5">
-            <Circle className="h-3 w-3 fill-primary text-primary" />
-            <Circle className="h-3 w-3 fill-primary text-primary" />
-            <Circle className="h-3 w-3 fill-primary text-primary" />
+            <Circle className="h-2.5 w-2.5 fill-primary/20 text-primary/60 stroke-[1.5]" />
+            <Circle className="h-3 w-3 fill-primary/30 text-primary/70 stroke-[1.5]" />
+            <Circle className="h-2 w-2 fill-primary/20 text-primary/60 stroke-[1.5]" />
           </div>
         </Button>
       </DialogTrigger>
@@ -248,9 +248,9 @@ export const UserProfileDialog = ({ userProfile, userId }: UserProfileDialogProp
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <div className="flex items-center gap-0.5">
-              <Circle className="h-4 w-4 fill-primary text-primary" />
-              <Circle className="h-4 w-4 fill-primary text-primary" />
-              <Circle className="h-4 w-4 fill-primary text-primary" />
+              <Circle className="h-3 w-3 fill-primary/20 text-primary/60 stroke-[1.5]" />
+              <Circle className="h-4 w-4 fill-primary/30 text-primary/70 stroke-[1.5]" />
+              <Circle className="h-2.5 w-2.5 fill-primary/20 text-primary/60 stroke-[1.5]" />
             </div>
             Il Tuo Profilo AI
           </DialogTitle>
