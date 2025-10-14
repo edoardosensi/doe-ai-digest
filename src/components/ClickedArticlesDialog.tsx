@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Archive } from "lucide-react";
+import { Archive, Trash2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface ClickedArticle {
   id: string;
@@ -33,6 +34,7 @@ export const ClickedArticlesDialog = ({ userId }: ClickedArticlesDialogProps) =>
   const [clickedArticles, setClickedArticles] = useState<ClickedArticle[]>([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (open && userId) {
@@ -65,6 +67,30 @@ export const ClickedArticlesDialog = ({ userId }: ClickedArticlesDialogProps) =>
       console.error("Error loading clicked articles:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDelete = async (clickId: string) => {
+    try {
+      const { error } = await supabase
+        .from("user_clicks")
+        .delete()
+        .eq("id", clickId);
+
+      if (error) throw error;
+
+      setClickedArticles(prev => prev.filter(click => click.id !== clickId));
+      toast({
+        title: "Eliminato!",
+        description: "Articolo rimosso dall'archivio",
+      });
+    } catch (error) {
+      console.error("Error deleting click:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile eliminare l'articolo",
+        variant: "destructive",
+      });
     }
   };
 
@@ -110,25 +136,35 @@ export const ClickedArticlesDialog = ({ userId }: ClickedArticlesDialogProps) =>
                     key={click.id}
                     className="border rounded-lg p-4 hover:bg-accent transition-colors"
                   >
-                    <a
-                      href={click.articles?.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block"
-                    >
-                      <h3 className="font-semibold mb-1 hover:text-primary transition-colors">
-                        {click.articles?.title}
-                      </h3>
-                      {click.articles?.description && (
-                        <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
-                          {click.articles.description}
-                        </p>
-                      )}
-                      <div className="flex items-center justify-between text-xs text-muted-foreground">
-                        <span>{click.articles?.source}</span>
-                        <span>{formatDate(click.clicked_at)}</span>
-                      </div>
-                    </a>
+                    <div className="flex gap-3">
+                      <a
+                        href={click.articles?.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1"
+                      >
+                        <h3 className="font-semibold mb-1 hover:text-primary transition-colors">
+                          {click.articles?.title}
+                        </h3>
+                        {click.articles?.description && (
+                          <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
+                            {click.articles.description}
+                          </p>
+                        )}
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <span>{click.articles?.source}</span>
+                          <span>{formatDate(click.clicked_at)}</span>
+                        </div>
+                      </a>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDelete(click.id)}
+                        className="shrink-0"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>
