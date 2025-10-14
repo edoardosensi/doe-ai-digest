@@ -196,7 +196,7 @@ const Dashboard = () => {
 
       <main className="container mx-auto px-4 py-6 max-w-7xl">
         {/* Testata stile giornale */}
-        <div className="mb-8 pb-6 border-b-2 border-primary pt-8">
+        <div className="mb-8 pb-6 border-b-2 border-primary pt-16">
           <div className="flex flex-col gap-6">
             <div className="flex items-center gap-4 justify-center sm:justify-start">
               <Newspaper className="w-12 h-12 sm:w-14 sm:h-14 text-primary flex-shrink-0" />
