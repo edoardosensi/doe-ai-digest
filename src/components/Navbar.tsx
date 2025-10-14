@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "./ui/button";
-import { BookOpen, LogOut, User } from "lucide-react";
+import { BookOpen, LogOut, User, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import { UserProfileDialog } from "./UserProfileDialog";
+import { ClickedArticlesDialog } from "./ClickedArticlesDialog";
 
 interface NavbarProps {
   user?: any;
@@ -46,6 +47,7 @@ export const Navbar = ({ user, userProfile }: NavbarProps) => {
                 <Link to="/dashboard">Dashboard</Link>
               </Button>
               <UserProfileDialog userProfile={userProfile} userId={user.id} />
+              <ClickedArticlesDialog userId={user.id} />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon">

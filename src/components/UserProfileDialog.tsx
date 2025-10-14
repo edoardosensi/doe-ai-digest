@@ -171,9 +171,8 @@ export const UserProfileDialog = ({ userProfile, userId }: UserProfileDialogProp
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative">
-          <MessageSquare className="h-5 w-5" />
-          <Sparkles className="h-3 w-3 absolute -top-1 -right-1 text-primary" />
+        <Button variant="ghost" size="icon">
+          <Sparkles className="h-5 w-5" />
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-2xl max-h-[80vh]">
