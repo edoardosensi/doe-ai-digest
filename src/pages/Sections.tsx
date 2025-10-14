@@ -166,25 +166,27 @@ const Sections = () => {
             Personalizza le sezioni che vuoi vedere nella tua dashboard
           </p>
 
-          <div className="bg-card rounded-lg border p-6 space-y-4">
-            {AVAILABLE_SECTIONS.map((section) => (
-              <div
-                key={section}
-                className="flex items-center space-x-3 p-3 rounded-lg hover:bg-accent transition-colors"
-              >
-                <Checkbox
-                  id={section}
-                  checked={userSections[section] || false}
-                  onCheckedChange={() => handleToggleSection(section)}
-                />
-                <label
-                  htmlFor={section}
-                  className="flex-1 text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+          <div className="bg-card rounded-lg border p-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {AVAILABLE_SECTIONS.map((section) => (
+                <div
+                  key={section}
+                  className="flex items-center space-x-3 p-3 rounded-lg hover:bg-accent transition-colors"
                 >
-                  {section}
-                </label>
-              </div>
-            ))}
+                  <Checkbox
+                    id={section}
+                    checked={userSections[section] || false}
+                    onCheckedChange={() => handleToggleSection(section)}
+                  />
+                  <label
+                    htmlFor={section}
+                    className="flex-1 text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                  >
+                    {section}
+                  </label>
+                </div>
+              ))}
+            </div>
           </div>
 
           <Button
