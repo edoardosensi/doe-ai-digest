@@ -19,6 +19,15 @@ interface Article {
   category?: string;
 }
 
+interface SavedArticle {
+  id: string;
+  title: string;
+  description: string;
+  url: string;
+  source?: string;
+  saved_at: string;
+}
+
 const Dashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -28,12 +37,14 @@ const Dashboard = () => {
   const [generating, setGenerating] = useState(false);
   const [userProfile, setUserProfile] = useState<string | null>(null);
   const [enabledSections, setEnabledSections] = useState<string[]>([]);
+  const [savedArticles, setSavedArticles] = useState<SavedArticle[]>([]);
   
-  // Load user's enabled sections
+  // Load user's enabled sections and saved articles
   useEffect(() => {
-    const loadSections = async () => {
+    const loadUserData = async () => {
       if (!user) return;
       
+      // Load sections
       const { data } = await supabase
         .from('user_sections')
         .select('section_name')
@@ -46,10 +57,32 @@ const Dashboard = () => {
         // Default sections if user hasn't configured any
         setEnabledSections(['Politica', 'Politica estera', 'Sport', 'Cultura']);
       }
+      
+      // Load saved articles
+      loadSavedArticles();
     };
     
-    loadSections();
+    loadUserData();
   }, [user]);
+  
+  const loadSavedArticles = async () => {
+    if (!user) return;
+    
+    const { data, error } = await supabase
+      .from('saved_articles')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('saved_at', { ascending: false });
+    
+    if (error) {
+      console.error('Error loading saved articles:', error);
+      return;
+    }
+    
+    if (data) {
+      setSavedArticles(data);
+    }
+  };
   
   // Use AI-provided categories directly from backend and filter by user sections
   const categorizeArticles = () => {
@@ -168,10 +201,39 @@ const Dashboard = () => {
         title: "Salvato!",
         description: "Articolo aggiunto ai preferiti",
       });
+      
+      // Reload saved articles
+      loadSavedArticles();
     } catch (error: any) {
       toast({
         title: "Errore",
         description: "Impossibile salvare l'articolo",
+        variant: "destructive",
+      });
+    }
+  };
+  
+  const handleDeleteSavedArticle = async (articleId: string) => {
+    try {
+      const { error } = await supabase
+        .from('saved_articles')
+        .delete()
+        .eq('id', articleId)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Rimosso!",
+        description: "Articolo rimosso dai salvati",
+      });
+      
+      // Reload saved articles
+      loadSavedArticles();
+    } catch (error: any) {
+      toast({
+        title: "Errore",
+        description: "Impossibile rimuovere l'articolo",
         variant: "destructive",
       });
     }
@@ -193,6 +255,34 @@ const Dashboard = () => {
       <Navbar user={user} userProfile={userProfile} />
 
       <main className="container mx-auto px-4 py-6 max-w-7xl">
+        {/* Articoli Salvati */}
+        {savedArticles.length > 0 && (
+          <div className="mb-8 bg-accent/10 rounded-lg p-6 border-2 border-accent">
+            <h2 className="text-2xl font-heading font-bold mb-4 flex items-center gap-2">
+              <Newspaper className="w-6 h-6" />
+              Articoli Salvati
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {savedArticles.slice(0, 3).map((article) => (
+                <ArticleCard
+                  key={article.id}
+                  title={article.title}
+                  description={article.description || ''}
+                  url={article.url}
+                  source={article.source || ''}
+                  onClick={() => window.open(article.url, '_blank')}
+                  showSaveButton={false}
+                />
+              ))}
+            </div>
+            {savedArticles.length > 3 && (
+              <p className="text-sm text-muted-foreground mt-4 text-center">
+                +{savedArticles.length - 3} altri articoli salvati
+              </p>
+            )}
+          </div>
+        )}
+        
         {/* Testata stile giornale */}
         <div className="mb-8 pb-6 border-b-2 border-primary">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
