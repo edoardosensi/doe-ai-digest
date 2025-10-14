@@ -45,7 +45,7 @@ export const Navbar = ({ user, userProfile }: NavbarProps) => {
               <Button variant="ghost" asChild>
                 <Link to="/dashboard">Dashboard</Link>
               </Button>
-              <UserProfileDialog userProfile={userProfile} />
+              <UserProfileDialog userProfile={userProfile} userId={user.id} />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon">

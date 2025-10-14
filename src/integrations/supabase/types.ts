@@ -53,6 +53,7 @@ export type Database = {
       profiles: {
         Row: {
           created_at: string | null
+          custom_profile: string | null
           display_name: string | null
           id: string
           interests: string | null
@@ -61,6 +62,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          custom_profile?: string | null
           display_name?: string | null
           id?: string
           interests?: string | null
@@ -69,11 +71,42 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          custom_profile?: string | null
           display_name?: string | null
           id?: string
           interests?: string | null
           updated_at?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      rss_feeds: {
+        Row: {
+          created_at: string | null
+          enabled: boolean | null
+          id: string
+          is_default: boolean | null
+          name: string
+          updated_at: string | null
+          url: string
+        }
+        Insert: {
+          created_at?: string | null
+          enabled?: boolean | null
+          id?: string
+          is_default?: boolean | null
+          name: string
+          updated_at?: string | null
+          url: string
+        }
+        Update: {
+          created_at?: string | null
+          enabled?: boolean | null
+          id?: string
+          is_default?: boolean | null
+          name?: string
+          updated_at?: string | null
+          url?: string
         }
         Relationships: []
       }
@@ -135,6 +168,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_rss_feeds: {
+        Row: {
+          created_at: string | null
+          enabled: boolean | null
+          id: string
+          name: string
+          url: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          enabled?: boolean | null
+          id?: string
+          name: string
+          url: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          enabled?: boolean | null
+          id?: string
+          name?: string
+          url?: string
+          user_id?: string
+        }
+        Relationships: []
       }
     }
     Views: {
