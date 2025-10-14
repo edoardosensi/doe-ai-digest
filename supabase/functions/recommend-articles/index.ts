@@ -91,12 +91,21 @@ serve(async (req) => {
             },
             { 
               role: 'user', 
-          content: `L'utente ha cliccato questi articoli: ${clickedArticlesInfo}. 
+              content: `L'utente ha cliccato questi articoli: ${clickedArticlesInfo}. 
               
-Dalla seguente lista di articoli disponibili, seleziona 16 URL (4 per ogni categoria: Politica, Politica estera, Sport, Cultura) più rilevanti per l'utente.
+Dalla seguente lista di articoli disponibili, devi selezionare ESATTAMENTE 4 URL per ogni categoria (Politica, Politica estera, Sport, Cultura) per un totale di 16 articoli.
+
+IMPORTANTE: 
+- Per "Politica": seleziona articoli sulla politica ITALIANA (governo, parlamento, elezioni, partiti italiani)
+- Per "Politica estera": seleziona articoli su politica INTERNAZIONALE (mondo, esteri, USA, Cina, Europa, UE, NATO, ONU, geopolitica)
+- Per "Sport": seleziona articoli su sport (calcio, Serie A, Champions, tennis, basket, olimpiadi, Formula 1)
+- Per "Cultura": seleziona articoli su cultura, spettacolo, cinema, teatro, arte, musica, libri
 
 Articoli disponibili:
-${allArticles.map(a => `URL: ${a.url}, Titolo: ${a.title}, Fonte: ${a.source}`).join('\n')}
+${allArticles.map(a => `URL: ${a.url}, Titolo: ${a.title}, Descrizione: ${a.description || 'N/A'}, Fonte: ${a.source}`).join('\n')}
+
+Analizza attentamente il titolo e la descrizione di ogni articolo per categorizzarlo correttamente.
+Se non ci sono abbastanza articoli per una categoria, scegli quelli più vicini al tema.
 
 Restituisci un oggetto JSON con questa struttura:
 {
@@ -123,24 +132,29 @@ Restituisci un oggetto JSON con questa struttura:
           const categorizedUrls = aiResponse.articles;
           const userProfile = aiResponse.userProfile;
           
-          // Flatten all URLs and filter articles
-          const allUrls = Object.values(categorizedUrls).flat();
-          recommendedArticles = allArticles.filter(a => allUrls.includes(a.url)).slice(0, 16);
+          // Build categorized articles array with category tag
+          const categorizedArticles = [];
+          for (const [category, urls] of Object.entries(categorizedUrls)) {
+            const categoryArticles = allArticles
+              .filter(a => (urls as string[]).includes(a.url))
+              .map(a => ({ ...a, category }));
+            categorizedArticles.push(...categoryArticles);
+          }
           
           return new Response(
             JSON.stringify({ 
-              articles: recommendedArticles,
-              userProfile: userProfile,
-              categories: categorizedUrls
+              articles: categorizedArticles,
+              userProfile: userProfile
             }), 
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         } catch (parseError) {
-          console.error('Failed to parse AI response:', parseError);
+          console.error('Failed to parse AI response:', parseError, 'Content:', content);
           // Fallback to random articles
           recommendedArticles = allArticles.sort(() => Math.random() - 0.5).slice(0, 16);
         }
       } else {
+        console.error('AI API error:', response.status, await response.text());
         // Fallback to random articles
         recommendedArticles = allArticles.sort(() => Math.random() - 0.5).slice(0, 16);
       }
