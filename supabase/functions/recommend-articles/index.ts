@@ -39,6 +39,20 @@ serve(async (req) => {
 
     console.log('Getting recommendations for user:', user.id);
 
+    // Get user's enabled sections
+    const { data: userSections } = await supabaseClient
+      .from('user_sections')
+      .select('section_name')
+      .eq('user_id', user.id)
+      .eq('enabled', true);
+    
+    // Use user's sections or default ones
+    const enabledSections = userSections && userSections.length > 0
+      ? userSections.map(s => s.section_name)
+      : ['Politica', 'Politica estera', 'Sport', 'Cultura'];
+    
+    console.log('User enabled sections:', enabledSections);
+
     // Get user's click history
     const { data: clicks } = await supabaseClient
       .from('user_clicks')
@@ -100,11 +114,8 @@ COMPITO: Analizza i pattern negli articoli che l'utente ha letto e:
    - I temi ricorrenti che lo attraggono
    - Lo stile di giornalismo che preferisce
 
-2. Seleziona ESATTAMENTE 4 articoli per ogni categoria che MEGLIO si allineano al profilo:
-   - "Politica": politica italiana interna
-   - "Politica estera": politica internazionale e geopolitica
-   - "Sport": sport e competizioni
-   - "Cultura": cultura, cinema, teatro, arte, musica
+2. Seleziona ESATTAMENTE 4 articoli per ogni categoria che MEGLIO si allineano al profilo.
+   Le categorie disponibili sono: ${enabledSections.join(', ')}
 
 CRITERI DI SELEZIONE:
 - Priorità assoluta: articoli che matchano gli interessi dimostrati nei click
@@ -120,10 +131,7 @@ IMPORTANTE: Se ci sono pochi articoli per una categoria, ripeti i migliori dispo
 Restituisci SOLO questo JSON (senza markdown):
 {
   "articles": {
-    "Politica": ["url1", "url2", "url3", "url4"],
-    "Politica estera": ["url1", "url2", "url3", "url4"],
-    "Sport": ["url1", "url2", "url3", "url4"],
-    "Cultura": ["url1", "url2", "url3", "url4"]
+    ${enabledSections.map(s => `"${s}": ["url1", "url2", "url3", "url4"]`).join(',\n    ')}
   },
   "userProfile": "Descrizione italiana di 3-4 righe che delinea precisamente gli interessi dell'utente basandosi sui suoi click. Usa termini specifici e concreti, non generici."
 }`
@@ -201,11 +209,7 @@ Restituisci SOLO questo JSON (senza markdown):
             },
             { 
               role: 'user', 
-              content: `Categorizza questi articoli nelle seguenti categorie:
-- "Politica": politica italiana interna (governo, parlamento, ministri, partiti italiani)
-- "Politica estera": politica internazionale e geopolitica (guerra, conflitti, leader stranieri, NATO, ONU)
-- "Sport": sport e competizioni (calcio, tennis, olimpiadi, formula 1, etc)
-- "Cultura": cultura, arte, spettacolo (cinema, teatro, musica, libri, festival)
+              content: `Categorizza questi articoli nelle categorie abilitate dall'utente: ${enabledSections.join(', ')}
 
 Analizza ATTENTAMENTE il titolo e la descrizione di ogni articolo per determinare la categoria corretta.
 Seleziona ESATTAMENTE 4 articoli per ogni categoria. Se ci sono pochi articoli per una categoria, ripeti i migliori disponibili.
@@ -216,10 +220,7 @@ ${allArticles.map(a => `URL: ${a.url}\nTitolo: ${a.title}\nDescrizione: ${a.desc
 Restituisci SOLO questo JSON (senza markdown):
 {
   "articles": {
-    "Politica": ["url1", "url2", "url3", "url4"],
-    "Politica estera": ["url1", "url2", "url3", "url4"],
-    "Sport": ["url1", "url2", "url3", "url4"],
-    "Cultura": ["url1", "url2", "url3", "url4"]
+    ${enabledSections.map(s => `"${s}": ["url1", "url2", "url3", "url4"]`).join(',\n    ')}
   }
 }`
             }
@@ -247,31 +248,37 @@ Restituisci SOLO questo JSON (senza markdown):
         } catch (parseError) {
           console.error('Failed to parse AI response:', parseError, 'Content:', content);
           // Fallback to keyword-based categorization
-          const categories: Record<string, any[]> = {
-            'Politica': [],
-            'Politica estera': [],
-            'Sport': [],
-            'Cultura': []
+          const categories: Record<string, any[]> = {};
+          enabledSections.forEach(s => categories[s] = []);
+          
+          const keywords: Record<string, string[]> = {
+            'Politica': ['governo', 'ministro', 'parlamento', 'meloni', 'salvini', 'elezioni', 'partito'],
+            'Politica estera': ['guerra', 'ucraina', 'gaza', 'nato', 'biden', 'trump', 'putin'],
+            'Sport': ['calcio', 'tennis', 'serie a', 'champions', 'milan', 'inter', 'juventus'],
+            'Cultura': ['cinema', 'film', 'teatro', 'musica', 'arte', 'festival'],
+            'Roma': ['roma', 'campidoglio', 'comune', 'gualtieri'],
+            'Filosofia': ['filosofia', 'filosofo', 'pensiero'],
+            'Scienza': ['scienza', 'ricerca', 'studio', 'scoperta'],
+            'Televisione': ['televisione', 'tv', 'rai', 'mediaset'],
+            'Stampa internazionale': ['internazionale', 'esteri', 'mondo']
           };
           
           allArticles.forEach(article => {
             const text = `${article.title} ${article.description || ''}`.toLowerCase();
+            let assigned = false;
             
-            if (text.match(/guerra|conflitto|ucraina|gaza|israele|palestina|biden|trump|putin|xi jinping|cina|usa america|nato|onu|geopolitica|internazionale|mondiale|esteri|washington|mosca|pechino/)) {
-              categories['Politica estera'].push({ ...article, category: 'Politica estera' });
+            for (const section of enabledSections) {
+              const sectionKeywords = keywords[section] || [];
+              if (sectionKeywords.some(kw => text.includes(kw))) {
+                categories[section].push({ ...article, category: section });
+                assigned = true;
+                break;
+              }
             }
-            else if (text.match(/governo|ministro|parlamento|meloni|salvini|schlein|conte|partito.*italiano|elezioni.*itali|referendum|camera|senato|quirinale|roma.*politic/)) {
-              categories['Politica'].push({ ...article, category: 'Politica' });
-            }
-            else if (text.match(/calcio|serie a|champions|juventus|milan|inter|napoli|roma.*sport|lazio.*sport|tennis|basket|formula.*1|motogp|olimpi|gara|partita|campionato|atletica|nuoto|playoff|coppa/)) {
-              categories['Sport'].push({ ...article, category: 'Sport' });
-            }
-            else if (text.match(/cinema|film|teatro|musica|concerto|mostra|arte|libro|lettera|festival|premio|spettacolo|cultura|museo|attore|regista|cantante|oscar|sanremo/)) {
-              categories['Cultura'].push({ ...article, category: 'Cultura' });
-            }
-            else {
+            
+            if (!assigned && enabledSections.length > 0) {
               const smallestCat = Object.entries(categories)
-                .reduce((min, [key, val]) => val.length < categories[min].length ? key : min, 'Politica');
+                .reduce((min, [key, val]) => val.length < categories[min].length ? key : min, enabledSections[0]);
               categories[smallestCat].push({ ...article, category: smallestCat });
             }
           });
@@ -284,36 +291,42 @@ Restituisci SOLO questo JSON (senza markdown):
             }
             recommendedArticles.push(...categoryArticles);
           }
-          recommendedArticles = recommendedArticles.slice(0, 16);
+          recommendedArticles = recommendedArticles.slice(0, enabledSections.length * 4);
         }
       } else {
         console.error('AI API error:', response.status, await response.text());
         // Fallback to keyword-based categorization
-        const categories: Record<string, any[]> = {
-          'Politica': [],
-          'Politica estera': [],
-          'Sport': [],
-          'Cultura': []
+        const categories: Record<string, any[]> = {};
+        enabledSections.forEach(s => categories[s] = []);
+        
+        const keywords: Record<string, string[]> = {
+          'Politica': ['governo', 'ministro', 'parlamento', 'meloni', 'salvini', 'elezioni', 'partito'],
+          'Politica estera': ['guerra', 'ucraina', 'gaza', 'nato', 'biden', 'trump', 'putin'],
+          'Sport': ['calcio', 'tennis', 'serie a', 'champions', 'milan', 'inter', 'juventus'],
+          'Cultura': ['cinema', 'film', 'teatro', 'musica', 'arte', 'festival'],
+          'Roma': ['roma', 'campidoglio', 'comune', 'gualtieri'],
+          'Filosofia': ['filosofia', 'filosofo', 'pensiero'],
+          'Scienza': ['scienza', 'ricerca', 'studio', 'scoperta'],
+          'Televisione': ['televisione', 'tv', 'rai', 'mediaset'],
+          'Stampa internazionale': ['internazionale', 'esteri', 'mondo']
         };
         
         allArticles.forEach(article => {
           const text = `${article.title} ${article.description || ''}`.toLowerCase();
+          let assigned = false;
           
-          if (text.match(/guerra|conflitto|ucraina|gaza|israele|palestina|biden|trump|putin|xi jinping|cina|usa america|nato|onu|geopolitica|internazionale|mondiale|esteri|washington|mosca|pechino/)) {
-            categories['Politica estera'].push({ ...article, category: 'Politica estera' });
+          for (const section of enabledSections) {
+            const sectionKeywords = keywords[section] || [];
+            if (sectionKeywords.some(kw => text.includes(kw))) {
+              categories[section].push({ ...article, category: section });
+              assigned = true;
+              break;
+            }
           }
-          else if (text.match(/governo|ministro|parlamento|meloni|salvini|schlein|conte|partito.*italiano|elezioni.*itali|referendum|camera|senato|quirinale|roma.*politic/)) {
-            categories['Politica'].push({ ...article, category: 'Politica' });
-          }
-          else if (text.match(/calcio|serie a|champions|juventus|milan|inter|napoli|roma.*sport|lazio.*sport|tennis|basket|formula.*1|motogp|olimpi|gara|partita|campionato|atletica|nuoto|playoff|coppa/)) {
-            categories['Sport'].push({ ...article, category: 'Sport' });
-          }
-          else if (text.match(/cinema|film|teatro|musica|concerto|mostra|arte|libro|lettera|festival|premio|spettacolo|cultura|museo|attore|regista|cantante|oscar|sanremo/)) {
-            categories['Cultura'].push({ ...article, category: 'Cultura' });
-          }
-          else {
+          
+          if (!assigned && enabledSections.length > 0) {
             const smallestCat = Object.entries(categories)
-              .reduce((min, [key, val]) => val.length < categories[min].length ? key : min, 'Politica');
+              .reduce((min, [key, val]) => val.length < categories[min].length ? key : min, enabledSections[0]);
             categories[smallestCat].push({ ...article, category: smallestCat });
           }
         });
@@ -326,7 +339,7 @@ Restituisci SOLO questo JSON (senza markdown):
           }
           recommendedArticles.push(...categoryArticles);
         }
-        recommendedArticles = recommendedArticles.slice(0, 16);
+        recommendedArticles = recommendedArticles.slice(0, enabledSections.length * 4);
       }
     }
 

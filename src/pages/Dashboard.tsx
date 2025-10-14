@@ -27,26 +27,43 @@ const Dashboard = () => {
   const [articles, setArticles] = useState<Article[]>([]);
   const [generating, setGenerating] = useState(false);
   const [userProfile, setUserProfile] = useState<string | null>(null);
+  const [enabledSections, setEnabledSections] = useState<string[]>([]);
   
-  // Use AI-provided categories directly from backend
-  const categorizeArticles = () => {
-    const categories: Record<string, Article[]> = {
-      'Politica': [],
-      'Politica estera': [],
-      'Sport': [],
-      'Cultura': []
+  // Load user's enabled sections
+  useEffect(() => {
+    const loadSections = async () => {
+      if (!user) return;
+      
+      const { data } = await supabase
+        .from('user_sections')
+        .select('section_name')
+        .eq('user_id', user.id)
+        .eq('enabled', true);
+      
+      if (data && data.length > 0) {
+        setEnabledSections(data.map(s => s.section_name));
+      } else {
+        // Default sections if user hasn't configured any
+        setEnabledSections(['Politica', 'Politica estera', 'Sport', 'Cultura']);
+      }
     };
+    
+    loadSections();
+  }, [user]);
+  
+  // Use AI-provided categories directly from backend and filter by user sections
+  const categorizeArticles = () => {
+    const categories: Record<string, Article[]> = {};
+    
+    // Initialize only enabled sections
+    enabledSections.forEach(section => {
+      categories[section] = [];
+    });
     
     // Use the category already assigned by the AI in the backend
     articles.forEach(article => {
       if (article.category && categories[article.category]) {
         categories[article.category].push(article);
-      } else {
-        // Fallback: if no category, put in smallest category
-        const smallestCategory = Object.entries(categories).reduce((min, [key, val]) => 
-          val.length < categories[min].length ? key : min, 'Politica'
-        );
-        categories[smallestCategory].push(article);
       }
     });
     
