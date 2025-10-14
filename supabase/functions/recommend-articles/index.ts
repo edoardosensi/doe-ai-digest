@@ -53,13 +53,13 @@ serve(async (req) => {
     
     console.log('User enabled sections:', enabledSections);
 
-    // Get user's click history
+    // Get user's click history with full article details
     const { data: clicks } = await supabaseClient
       .from('user_clicks')
-      .select('article_id, articles(title, description, source)')
+      .select('article_id, clicked_at, articles(title, description, source, url, category)')
       .eq('user_id', user.id)
       .order('clicked_at', { ascending: false })
-      .limit(20);
+      .limit(50);
 
     // Get user's interests and existing profile from profile
     const { data: profile } = await supabaseClient
@@ -91,8 +91,12 @@ serve(async (req) => {
       
       // User has click history - use AI to build/update profile and recommend
       const clickedArticlesInfo = clicks
-        .map((c: any) => `${c.articles.title} (${c.articles.source})`)
-        .join(', ');
+        .map((c: any, idx: number) => {
+          const article = c.articles;
+          const date = new Date(c.clicked_at).toLocaleDateString('it-IT');
+          return `[${idx + 1}] ${article.title}\n   Fonte: ${article.source} | Data click: ${date}\n   Descrizione: ${article.description || 'N/A'}\n   Categoria: ${article.category || 'N/A'}`;
+        })
+        .join('\n\n');
 
       const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
         method: 'POST',
@@ -111,35 +115,76 @@ serve(async (req) => {
               role: 'user', 
               content: `🧠 LA MIA BOLLA - SISTEMA DI PROFILAZIONE AVANZATA
 
-${existingProfile ? `PROFILO ESISTENTE DA AGGIORNARE:\n${existingProfile}\n\n` : ''}STORICO COMPLETO LETTURE (ultimi ${clicks.length} click):
+${existingProfile ? `📊 PROFILO ESISTENTE DA AGGIORNARE:\n${existingProfile}\n\n` : ''}📖 STORICO COMPLETO LETTURE (ultimi ${clicks.length} articoli cliccati):
+
 ${clickedArticlesInfo}
 
-🎯 MISSIONE:
-1. ANALIZZA PROFONDAMENTE i pattern di lettura:
-   - Quali TEMI specifici ricorrono? (non solo categorie, ma sottoargomenti precisi)
-   - Quale ANGOLAZIONE preferisce? (tecnica, emotiva, politica, internazionale)
-   - Quale COMPLESSITÀ cerca? (analisi profonde, breaking news, curiosità)
-   - Quali FONTI predilige? (mainstream, alternativi, esteri)
-   - PATTERN TEMPORALI: quando clicca cosa? (progressione interessi)
-   - CORRELAZIONI NASCOSTE: quali temi si legano tra loro nei suoi interessi?
+🎯 MISSIONE DI ANALISI PROFONDA:
 
-2. COSTRUISCI/AGGIORNA "LA BOLLA" (profilo utente di 5-7 righe):
-   ${existingProfile ? '- INTEGRA il profilo esistente con nuove intuizioni dai click recenti' : '- CREA un profilo dettagliato iniziale'}
-   - Usa linguaggio psicologico preciso e concreto
-   - Identifica NON solo "cosa" legge, ma "perché" (motivazioni profonde)
-   - Prevedi evoluzione interessi futuri
-   - Sii specifico: nomi, temi precisi, non genericità
-
-3. SELEZIONA ARTICOLI PERFETTI:
-   Categorie: ${enabledSections.join(', ')}
-   - Scegli 4 articoli per categoria che:
-     * Matchano PRECISAMENTE il profilo psicologico
-     * Offrono sia CONTINUITÀ (interessi noti) che SCOPERTA GUIDATA (nuove prospettive correlate)
-     * Evitano ridondanza ma mantengono coerenza tematica
+1. ANALISI MULTI-DIMENSIONALE DEI PATTERN:
    
-REGOLE SPECIALI:
-- "Filosofia": SOLO se tratta di filosofi, correnti filosofiche, concetti profondi (etica, metafisica, epistemologia). NO articoli generici.
-- Se pochi articoli per una categoria, ripeti i migliori ma SOLO se veramente rilevanti
+   a) TEMI E SOTTOARGOMENTI:
+      - Identifica i temi ricorrenti specifici (es: "politica economica UE", "AI e neuroscienze", "conflitti geopolitici")
+      - Rileva sottoargomenti emergenti e correlazioni tra diversi ambiti
+      - Nota eventuali "ossessioni informative" (temi cercati ripetutamente)
+   
+   b) ANGOLAZIONE E PROSPETTIVA:
+      - Preferisce analisi tecniche, emotivo-narrative, o politically-charged?
+      - Cerca diverse fonti/prospettive o conferma preesistenti visioni?
+      - Tipo di linguaggio: accademico, giornalistico mainstream, alternative media?
+   
+   c) PROFONDITÀ E COMPLESSITÀ:
+      - Breaking news vs approfondimenti lunghi?
+      - Fact-based reporting vs opinion pieces?
+      - Livello di specializzazione: generalista, semi-esperto, esperto?
+   
+   d) FONTI E CREDIBILITÀ:
+      - Quali testate predilige? (mainstream italiane, internazionali, alternative)
+      - Pattern di fiducia: fonti ufficiali vs indipendenti?
+   
+   e) CRONOLOGIA E EVOLUZIONE:
+      - Come cambiano gli interessi nel tempo? (ultime 50 letture)
+      - Ci sono "fasi" o "cicli" tematici?
+      - Eventi trigger che spostano l'attenzione?
+   
+   f) PSICOLOGIA DEL LETTORE:
+      - Cerca conferme (echo chamber) o sfide cognitive?
+      - Motivazione: informarsi, capire, agire, evadere?
+      - Livello di engagement emotivo vs razionale
+
+2. COSTRUZIONE/AGGIORNAMENTO "LA BOLLA" (7-10 righe, linguaggio preciso):
+   
+   ${existingProfile ? '- INTEGRA il profilo precedente con nuove scoperte dai click recenti\n   - Evidenzia CAMBIAMENTI e CONTINUITÀ' : '- CREA un profilo psicologico iniziale dettagliato'}
+   - Usa terminologia precisa (no genericità tipo "interessato alla politica")
+   - Esempio GOOD: "Ossessione per dinamiche israelo-palestinesi, focus su violazioni diritti umani, fonti dirette Al Jazeera"
+   - Esempio BAD: "Interessato alla politica internazionale"
+   - Identifica MOTIVAZIONI PROFONDE: perché legge quello che legge?
+   - PREDICI con precisione: cosa cercherà nei prossimi giorni/settimane?
+   - Sii CONCRETO: nomi, eventi, testate, temi specifici
+
+3. SELEZIONE ARTICOLI IPER-PERSONALIZZATI:
+   
+   Categorie disponibili: ${enabledSections.join(', ')}
+   
+   Per ogni categoria seleziona 4 articoli che:
+   
+   a) PRECISIONE PSICOLOGICA:
+      - Matchano ESATTAMENTE il profilo costruito sopra
+      - Considerano sottotemi, angolazioni, fonti preferite
+      - Rispettano il livello di complessità desiderato
+   
+   b) BILANCIAMENTO STRATEGICO:
+      - 2-3 articoli: CONTINUITÀ (interessi consolidati, comfort zone)
+      - 1-2 articoli: SCOPERTA GUIDATA (nuove prospettive correlate ai suoi interessi)
+      - Evita ripetitività ma mantieni coerenza tematica
+   
+   c) QUALITÀ > QUANTITÀ:
+      - Se pochi articoli adatti in una categoria, meglio meno articoli buoni che forzature
+      - Ripeti un articolo eccellente piuttosto che inserirne uno non pertinente
+   
+   REGOLE CATEGORIALI SPECIALI:
+   - "Filosofia": SOLO articoli su filosofi, correnti, concetti filosofici profondi (etica, metafisica, epistemologia). NO generalizzazioni.
+   - Ogni articolo deve "parlare" al profilo psicologico specifico dell'utente
 
 ARTICOLI DISPONIBILI:
 ${allArticles.map(a => `URL: ${a.url}\nTitolo: ${a.title}\nDescrizione: ${a.description || 'N/A'}\n---`).join('\n')}
