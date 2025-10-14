@@ -107,7 +107,7 @@ const Index = () => {
           <div className="flex items-center justify-center gap-3 mb-4">
             <Newspaper className="w-12 h-12 text-primary" />
           </div>
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-heading font-bold tracking-tight text-foreground break-words px-4">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-heading font-bold tracking-tight text-foreground break-words px-4">
             Doe
           </h1>
           <p className="text-sm text-muted-foreground italic px-4">
