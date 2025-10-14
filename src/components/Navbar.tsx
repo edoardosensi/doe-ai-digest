@@ -12,6 +12,7 @@ import {
 import { UserProfileDialog } from "./UserProfileDialog";
 import { ClickedArticlesDialog } from "./ClickedArticlesDialog";
 import { SavedArticlesDialog } from "./SavedArticlesDialog";
+import { BubbleDialog } from "./BubbleDialog";
 
 interface NavbarProps {
   user?: any;
@@ -47,6 +48,7 @@ export const Navbar = ({ user, userProfile }: NavbarProps) => {
               <Button variant="ghost" asChild>
                 <Link to="/dashboard">Dashboard</Link>
               </Button>
+              <BubbleDialog userId={user.id} />
               <Button variant="ghost" asChild>
                 <Link to="/sections">Sezioni</Link>
               </Button>
