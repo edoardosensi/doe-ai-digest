@@ -94,9 +94,27 @@ export const BubbleDialog = ({ userId }: BubbleDialogProps) => {
             <Sparkles className="h-5 w-5 text-primary" />
             La tua Bolla
           </DialogTitle>
-          <DialogDescription>
-            Questo è il profilo AI che guida la selezione personalizzata dei tuoi articoli. 
-            Puoi modificarlo per influenzare le raccomandazioni future.
+          <DialogDescription className="space-y-2">
+            <p>
+              Questo è il profilo AI che guida la selezione personalizzata dei tuoi articoli.
+            </p>
+            <p className="font-semibold text-foreground">
+              💡 Come funziona:
+            </p>
+            <ul className="list-disc list-inside text-sm space-y-1">
+              <li>L'AI analizza i tuoi click e crea automaticamente un profilo dettagliato</li>
+              <li>Puoi modificarlo manualmente per specificare esattamente cosa vuoi vedere</li>
+              <li>Una volta modificato, l'AI obbedirà alle tue istruzioni</li>
+            </ul>
+            <p className="font-semibold text-foreground mt-2">
+              📝 Esempi di personalizzazione:
+            </p>
+            <ul className="list-disc list-inside text-sm space-y-1">
+              <li>"Voglio solo articoli su Matteo Renzi e politica italiana"</li>
+              <li>"Nessun articolo di sport, solo cultura e scienza"</li>
+              <li>"Solo analisi approfondite, no breaking news"</li>
+              <li>"Preferisco fonti internazionali come NYT e BBC"</li>
+            </ul>
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
@@ -105,12 +123,12 @@ export const BubbleDialog = ({ userId }: BubbleDialogProps) => {
             <Textarea
               value={bubble}
               onChange={(e) => setBubble(e.target.value)}
-              placeholder="L'AI analizzerà i tuoi interessi e creerà un profilo personalizzato..."
-              className="min-h-[200px] font-mono text-sm"
+              placeholder="L'AI creerà automaticamente il tuo profilo analizzando gli articoli che leggi. Puoi modificarlo qui per specificare esattamente cosa vuoi vedere. Ad esempio: 'Voglio solo articoli su tecnologia e intelligenza artificiale, con focus su etica e implicazioni sociali. Niente sport o gossip.'"
+              className="min-h-[250px] font-mono text-sm"
             />
             <p className="text-xs text-muted-foreground">
-              Questo profilo viene generato e aggiornato automaticamente dall'AI in base ai tuoi click sugli articoli.
-              Puoi modificarlo manualmente per guidare meglio le raccomandazioni.
+              💡 <strong>Suggerimento:</strong> Sii specifico! Se modifichi questo testo, l'AI seguirà rigorosamente le tue istruzioni nella selezione degli articoli. 
+              Se vuoi tornare alla modalità automatica, cancella tutto e salva.
             </p>
           </div>
           <div className="flex justify-end gap-2">

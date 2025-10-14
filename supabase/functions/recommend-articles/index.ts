@@ -88,6 +88,7 @@ serve(async (req) => {
     if (clicks && clicks.length > 0) {
       // Get existing profile to enhance it
       const existingProfile = profile?.custom_profile || null;
+      const hasCustomProfile = existingProfile && existingProfile.length > 50; // Assume custom if substantial
       
       // User has click history - use AI to build/update profile and recommend
       const clickedArticlesInfo = clicks
@@ -98,22 +99,52 @@ serve(async (req) => {
         })
         .join('\n\n');
 
-      const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'google/gemini-2.5-flash',
-          messages: [
-            { 
-              role: 'system', 
-              content: 'Sei "LA BOLLA" - un intelligenza artificiale avanzata che costruisce e affina continuamente il profilo psicologico del lettore. Sei un esperto di neuroscienze cognitive, psicologia dei consumi mediatici, e giornalismo. Il tuo compito è creare una "bolla informativa personalizzata" sempre più precisa ad ogni interazione.'
-            },
-            { 
-              role: 'user', 
-              content: `🧠 LA MIA BOLLA - SISTEMA DI PROFILAZIONE AVANZATA
+      // Build the system prompt - different based on whether user has custom profile
+      const systemPrompt = hasCustomProfile 
+        ? `Sei "LA BOLLA" - un'intelligenza artificiale che DEVE OBBEDIRE ASSOLUTAMENTE al profilo personalizzato dell'utente. 
+
+⚠️ REGOLA ASSOLUTA: L'utente ha definito esplicitamente i suoi interessi e preferenze. Tu DEVI selezionare SOLO articoli che corrispondono ESATTAMENTE a quanto specificato nel profilo utente.
+
+Se l'utente dice "solo articoli su Matteo Renzi", mostri SOLO articoli su Matteo Renzi.
+Se l'utente dice "nessun articolo sportivo", NON includi sport.
+Se l'utente specifica temi, autori, o angolazioni - rispettali ALLA LETTERA.
+
+Il tuo compito NON è aggiornare il profilo ma APPLICARLO RIGOROSAMENTE nella selezione degli articoli.`
+        : `Sei "LA BOLLA" - un'intelligenza artificiale avanzata che costruisce e affina continuamente il profilo psicologico del lettore. Sei un esperto di neuroscienze cognitive, psicologia dei consumi mediatici, e giornalismo. Il tuo compito è creare una "bolla informativa personalizzata" sempre più precisa ad ogni interazione.`;
+
+      const userPrompt = hasCustomProfile
+        ? `🎯 PROFILO UTENTE DA RISPETTARE ASSOLUTAMENTE:
+${existingProfile}
+
+⚠️ QUESTO PROFILO È STATO PERSONALIZZATO DALL'UTENTE. DEVI OBBEDIRE RIGOROSAMENTE.
+
+📖 Storico letture (per contestualizzare, ma il profilo sopra ha PRIORITÀ):
+${clickedArticlesInfo}
+
+🎯 TUO COMPITO:
+Seleziona articoli che corrispondono ESATTAMENTE al profilo specificato sopra.
+
+Categorie disponibili: ${enabledSections.join(', ')}
+
+Per ogni categoria seleziona 4 articoli che:
+1. Rispettano ALLA LETTERA le preferenze nel profilo utente
+2. Se il profilo specifica temi/persone/eventi - SOLO quelli
+3. Se il profilo esclude qualcosa - NON includerlo MAI
+4. Mantieni coerenza con il profilo in ogni scelta
+
+QUALITÀ > QUANTITÀ: Se pochi articoli matchano il profilo, meglio lasciare categorie vuote.
+
+ARTICOLI DISPONIBILI:
+${allArticles.map(a => `URL: ${a.url}\nTitolo: ${a.title}\nDescrizione: ${a.description || 'N/A'}\n---`).join('\n')}
+
+Restituisci SOLO questo JSON (senza markdown):
+{
+  "articles": {
+    ${enabledSections.map(s => `"${s}": ["url1", "url2", "url3", "url4"]`).join(',\n    ')}
+  },
+  "userProfile": "${existingProfile.replace(/"/g, '\\"')}"
+}`
+        : `🧠 LA MIA BOLLA - SISTEMA DI PROFILAZIONE AVANZATA
 
 ${existingProfile ? `📊 PROFILO ESISTENTE DA AGGIORNARE:\n${existingProfile}\n\n` : ''}📖 STORICO COMPLETO LETTURE (ultimi ${clicks.length} articoli cliccati):
 
@@ -195,7 +226,24 @@ Restituisci SOLO questo JSON (senza markdown):
     ${enabledSections.map(s => `"${s}": ["url1", "url2", "url3", "url4"]`).join(',\n    ')}
   },
   "userProfile": "LA BOLLA: [Profilo dettagliato 5-7 righe che descrive PRECISAMENTE la psicologia del lettore, i suoi interessi profondi, pattern nascosti, e previsioni future. Basato su ${clicks.length} click analizzati. ${existingProfile ? 'Aggiornato e raffinato dal profilo precedente.' : 'Profilo iniziale costruito.'}]"
-}`
+}`;
+
+      const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'google/gemini-2.5-flash',
+          messages: [
+            { 
+              role: 'system', 
+              content: systemPrompt
+            },
+            { 
+              role: 'user', 
+              content: userPrompt
             }
           ],
         }),
@@ -211,8 +259,9 @@ Restituisci SOLO questo JSON (senza markdown):
           const categorizedUrls = aiResponse.articles;
           const userProfile = aiResponse.userProfile;
           
-          // Save the AI-generated profile to the database
-          if (userProfile) {
+          // Save the AI-generated profile to the database ONLY if user hasn't customized it
+          // If user has customized profile, we keep it and don't overwrite
+          if (userProfile && !hasCustomProfile) {
             const { error: profileError } = await supabaseClient
               .from('profiles')
               .update({ custom_profile: userProfile })
@@ -223,6 +272,8 @@ Restituisci SOLO questo JSON (senza markdown):
             } else {
               console.log('User profile updated successfully');
             }
+          } else if (hasCustomProfile) {
+            console.log('User has custom profile - skipping auto-update to preserve user preferences');
           }
           
           // Build categorized articles array with category tag
