@@ -8,16 +8,25 @@ const corsHeaders = {
 };
 
 const RSS_FEEDS = {
+  // News generali
   'Repubblica': 'https://www.repubblica.it/rss/homepage/rss2.0.xml',
-  'La Stampa': 'https://www.lastampa.it/rss',
   'Corriere della Sera': 'https://www.corriere.it/rss/homepage.xml',
   'ANSA': 'https://www.ansa.it/sito/ansait_rss.xml',
-  'Il Post': 'https://www.ilpost.it/feed/',
-  'Il Tempo': 'https://www.iltempo.it/rss',
-  'Liberoquotidiano': 'https://www.liberoquotidiano.it/rss.xml',
-  'Fanpage': 'https://www.fanpage.it/feed/',
-  'Avvenire': 'https://www.avvenire.it/rss',
-  'Il Foglio': 'https://www.ilfoglio.it/rss'
+  
+  // Sport
+  'Repubblica Sport': 'https://www.repubblica.it/rss/sport/rss2.0.xml',
+  'Corriere Sport': 'https://www.corriere.it/rss/sport.xml',
+  'La Gazzetta dello Sport': 'https://www.gazzetta.it/rss/home.xml',
+  'Sky Sport': 'https://sport.sky.it/rss/sport.xml',
+  
+  // Cultura e Spettacoli
+  'Repubblica Spettacoli': 'https://www.repubblica.it/rss/spettacoli/rss2.0.xml',
+  'Corriere Spettacoli': 'https://www.corriere.it/rss/spettacoli.xml',
+  'ANSA Cultura': 'https://www.ansa.it/sito/notizie/cultura/cultura_rss.xml',
+  
+  // Politica
+  'ANSA Politica': 'https://www.ansa.it/sito/notizie/politica/politica_rss.xml',
+  'Repubblica Politica': 'https://www.repubblica.it/rss/politica/rss2.0.xml',
 };
 
 interface Article {
@@ -38,7 +47,7 @@ async function parseRSSFeed(url: string, source: string): Promise<Article[]> {
     const itemRegex = /<item>([\s\S]*?)<\/item>/g;
     let match;
     
-    while ((match = itemRegex.exec(text)) !== null && items.length < 5) {
+    while ((match = itemRegex.exec(text)) !== null && items.length < 10) {
       const item = match[1];
       
       const titleMatch = /<title><!\[CDATA\[(.*?)\]\]><\/title>|<title>(.*?)<\/title>/.exec(item);
