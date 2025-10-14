@@ -125,15 +125,21 @@ const Sections = () => {
 
       // Group feeds by section
       const grouped: Record<string, RssFeed[]> = {};
+      const defaultExpanded: Record<string, boolean> = {};
       feedsData?.forEach((feed) => {
         if (feed.section_name) {
           if (!grouped[feed.section_name]) {
             grouped[feed.section_name] = [];
+            // Espandi le sezioni di default
+            if (["Politica", "Politica estera", "Sport", "Cultura"].includes(feed.section_name)) {
+              defaultExpanded[feed.section_name] = true;
+            }
           }
           grouped[feed.section_name].push(feed);
         }
       });
       setFeedsBySection(grouped);
+      setExpandedSections(defaultExpanded);
 
       // Load user feed preferences
       const { data: prefsData, error: prefsError } = await supabase
