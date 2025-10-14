@@ -87,27 +87,50 @@ serve(async (req) => {
           messages: [
             { 
               role: 'system', 
-              content: 'Sei un sistema di raccomandazione di articoli. Basandoti sulla storia degli articoli cliccati dall\'utente, devi identificare i pattern di interesse e selezionare gli articoli più rilevanti dalla lista disponibile.'
+              content: 'Sei un esperto giornalista italiano specializzato nella categorizzazione di notizie. Devi analizzare attentamente ogni articolo e categorizzarlo con precisione basandoti ESCLUSIVAMENTE sul contenuto del titolo e della descrizione.'
             },
             { 
               role: 'user', 
-              content: `L'utente ha cliccato questi articoli: ${clickedArticlesInfo}. 
-              
-Dalla seguente lista di articoli disponibili, devi selezionare ESATTAMENTE 4 URL per ogni categoria (Politica, Politica estera, Sport, Cultura) per un totale di 16 articoli.
+              content: `L'utente ha letto questi articoli: ${clickedArticlesInfo}. 
+
+COMPITO: Dalla lista di articoli disponibili, devi selezionare ESATTAMENTE 4 articoli per ogni categoria (totale 16).
+
+CATEGORIE E CRITERI RIGIDI:
+1. "Politica" - SOLO politica italiana interna:
+   - Governo italiano, ministri italiani, parlamento italiano
+   - Partiti politici italiani, elezioni italiane
+   - Riforme, leggi italiane, questioni parlamentari
+   - NON includere: notizie internazionali, UE, NATO, accordi esteri
+
+2. "Politica estera" - SOLO politica internazionale:
+   - Guerra, conflitti internazionali (Ucraina, Gaza, ecc.)
+   - Leaders stranieri (Biden, Putin, Xi Jinping)
+   - Organizzazioni internazionali (ONU, NATO, UE in contesto globale)
+   - Relazioni tra stati, accordi internazionali, geopolitica
+   - NON includere: politica italiana, se non in contesto internazionale
+
+3. "Sport" - SOLO sport:
+   - Calcio, tennis, basket, Formula 1, ciclismo
+   - Campionati, partite, risultati sportivi
+   - Atleti, allenatori, squadre
+   - NON includere: politica dello sport o economia dello sport
+
+4. "Cultura" - SOLO cultura e spettacolo:
+   - Cinema, teatro, musica, arte, mostre
+   - Libri, letteratura, premi letterari
+   - Festival culturali, concerti, spettacoli
+   - NON includere: cronaca culturale o politica culturale
+
+ARTICOLI DISPONIBILI:
+${allArticles.map(a => `URL: ${a.url}\nTitolo: ${a.title}\nDescrizione: ${a.description || 'N/A'}\n---`).join('\n')}
 
 IMPORTANTE: 
-- Per "Politica": seleziona articoli sulla politica ITALIANA (governo, parlamento, elezioni, partiti italiani)
-- Per "Politica estera": seleziona articoli su politica INTERNAZIONALE (mondo, esteri, USA, Cina, Europa, UE, NATO, ONU, geopolitica)
-- Per "Sport": seleziona articoli su sport (calcio, Serie A, Champions, tennis, basket, olimpiadi, Formula 1)
-- Per "Cultura": seleziona articoli su cultura, spettacolo, cinema, teatro, arte, musica, libri
+- Leggi ATTENTAMENTE titolo e descrizione di OGNI articolo
+- Se un articolo parla di più temi, usa il tema PRINCIPALE
+- Se non ci sono 4 articoli per una categoria, ripeti quelli più attinenti
+- NON mischiare le categorie
 
-Articoli disponibili:
-${allArticles.map(a => `URL: ${a.url}, Titolo: ${a.title}, Descrizione: ${a.description || 'N/A'}, Fonte: ${a.source}`).join('\n')}
-
-Analizza attentamente il titolo e la descrizione di ogni articolo per categorizzarlo correttamente.
-Se non ci sono abbastanza articoli per una categoria, scegli quelli più vicini al tema.
-
-Restituisci un oggetto JSON con questa struttura:
+Restituisci SOLO questo JSON (senza markdown):
 {
   "articles": {
     "Politica": ["url1", "url2", "url3", "url4"],
@@ -115,7 +138,7 @@ Restituisci un oggetto JSON con questa struttura:
     "Sport": ["url1", "url2", "url3", "url4"],
     "Cultura": ["url1", "url2", "url3", "url4"]
   },
-  "userProfile": "Una descrizione in italiano di 3-4 righe che spiega gli interessi dell'utente basandosi sui suoi click, il tipo di notizie che preferisce, e come selezioni gli articoli per lui."
+  "userProfile": "Descrizione italiana di 3-4 righe degli interessi dell'utente basata sui suoi click"
 }`
             }
           ],
@@ -159,9 +182,56 @@ Restituisci un oggetto JSON con questa struttura:
         recommendedArticles = allArticles.sort(() => Math.random() - 0.5).slice(0, 16);
       }
     } else {
-      // Not enough history - return random articles
-      console.log('Not enough click history, returning random articles');
-      recommendedArticles = allArticles.sort(() => Math.random() - 0.5).slice(0, 16);
+      // Not enough history - categorize all available articles
+      console.log('Not enough click history, categorizing available articles');
+      
+      // Categorize articles by keywords
+      const categories: Record<string, any[]> = {
+        'Politica': [],
+        'Politica estera': [],
+        'Sport': [],
+        'Cultura': []
+      };
+      
+      allArticles.forEach(article => {
+        const text = `${article.title} ${article.description || ''}`.toLowerCase();
+        
+        // Check for international politics first (more specific)
+        if (text.match(/guerra|conflitto|ucraina|gaza|israele|palestina|biden|trump|putin|xi jinping|cina|usa america|nato|onu|geopolitica|internazionale|mondiale|esteri/)) {
+          categories['Politica estera'].push({ ...article, category: 'Politica estera' });
+        }
+        // Then Italian politics
+        else if (text.match(/governo|ministro|parlamento|meloni|salvini|schlein|conte|partito.*italiano|elezioni.*itali|referendum|camera|senato|quirinale/)) {
+          categories['Politica'].push({ ...article, category: 'Politica' });
+        }
+        // Sports
+        else if (text.match(/calcio|serie a|champions|juventus|milan|inter|napoli|roma|lazio|sport|tennis|basket|formula.*1|motogp|olimpi|gara|partita|campionato|atletica|nuoto/)) {
+          categories['Sport'].push({ ...article, category: 'Sport' });
+        }
+        // Culture
+        else if (text.match(/cinema|film|teatro|musica|concerto|mostra|arte|libro|lettera|festival|premio|spettacolo|cultura|museo|attore|regista|cantante/)) {
+          categories['Cultura'].push({ ...article, category: 'Cultura' });
+        }
+        // Fallback: distribute to smallest category
+        else {
+          const smallestCat = Object.entries(categories)
+            .reduce((min, [key, val]) => val.length < categories[min].length ? key : min, 'Politica');
+          categories[smallestCat].push({ ...article, category: smallestCat });
+        }
+      });
+      
+      // Take 4 from each category, or repeat if not enough
+      recommendedArticles = [];
+      for (const [category, articles] of Object.entries(categories)) {
+        const categoryArticles = articles.slice(0, 4);
+        // If less than 4, repeat the available ones
+        while (categoryArticles.length < 4 && articles.length > 0) {
+          categoryArticles.push(articles[categoryArticles.length % articles.length]);
+        }
+        recommendedArticles.push(...categoryArticles);
+      }
+      
+      recommendedArticles = recommendedArticles.slice(0, 16);
     }
 
     return new Response(
