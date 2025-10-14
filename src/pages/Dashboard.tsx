@@ -197,11 +197,11 @@ const Dashboard = () => {
       <main className="container mx-auto px-4 py-6 max-w-7xl">
         {/* Testata stile giornale */}
         <div className="mb-8 pb-6 border-b-2 border-primary">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-4">
               <Newspaper className="w-10 h-10 sm:w-12 sm:h-12 text-primary flex-shrink-0" />
               <div>
-                <h1 className="text-4xl sm:text-5xl md:text-6xl font-heading font-bold tracking-tight">
+                <h1 className="text-3xl sm:text-4xl md:text-5xl font-heading font-bold tracking-tight">
                   Doe
                 </h1>
                 <p className="text-xs sm:text-sm text-muted-foreground mt-1 italic">
