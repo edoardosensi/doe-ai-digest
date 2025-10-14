@@ -82,13 +82,44 @@ serve(async (req) => {
       );
     }
 
-    // Helper function to return fallback articles
+    // Helper function to return fallback articles filtered by user sections
     const returnFallbackArticles = (message: string) => {
       console.log('Using fallback mode:', message);
-      const fallbackArticles = allArticles.slice(0, 16);
+      
+      // Filter articles by category matching user's enabled sections
+      const categorizedFallbackArticles = [];
+      
+      for (const section of enabledSections) {
+        // Try to find articles matching the section name (case-insensitive partial match)
+        const sectionArticles = allArticles
+          .filter(a => {
+            const category = (a.category || '').toLowerCase();
+            const sectionLower = section.toLowerCase();
+            return category.includes(sectionLower) || sectionLower.includes(category);
+          })
+          .slice(0, 4) // Take up to 4 articles per section
+          .map(a => ({ ...a, category: section }));
+        
+        categorizedFallbackArticles.push(...sectionArticles);
+      }
+      
+      // If no articles matched by category, just take recent articles and distribute them
+      if (categorizedFallbackArticles.length === 0) {
+        const articlesPerSection = Math.ceil(16 / enabledSections.length);
+        let index = 0;
+        
+        for (const section of enabledSections) {
+          const sectionArticles = allArticles
+            .slice(index, index + articlesPerSection)
+            .map(a => ({ ...a, category: section }));
+          categorizedFallbackArticles.push(...sectionArticles);
+          index += articlesPerSection;
+        }
+      }
+      
       return new Response(
         JSON.stringify({ 
-          articles: fallbackArticles,
+          articles: categorizedFallbackArticles.slice(0, 16),
           fallbackMode: true,
           message: message
         }), 
