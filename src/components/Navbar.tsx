@@ -45,6 +45,9 @@ export const Navbar = ({ user, userProfile }: NavbarProps) => {
           {user ? (
             <>
               <Button variant="ghost" asChild>
+                <Link to="/dashboard">Dashboard</Link>
+              </Button>
+              <Button variant="ghost" asChild>
                 <Link to="/sections">Sezioni</Link>
               </Button>
               <ClickedArticlesDialog userId={user.id} />

@@ -95,6 +95,11 @@ const Dashboard = () => {
   }, [navigate]);
 
   const loadRecommendedArticles = async () => {
+    if (!user) {
+      console.log('User not loaded yet, skipping article load');
+      return;
+    }
+    
     setGenerating(true);
     try {
       // First, fetch new articles from RSS feeds
