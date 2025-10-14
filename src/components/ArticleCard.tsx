@@ -7,7 +7,9 @@ interface ArticleCardProps {
   description: string;
   url: string;
   source?: string;
+  image_url?: string;
   onSave?: () => void;
+  onClick?: () => void;
   showSaveButton?: boolean;
 }
 
@@ -16,14 +18,29 @@ export const ArticleCard = ({
   description, 
   url, 
   source,
+  image_url,
   onSave,
+  onClick,
   showSaveButton = true 
 }: ArticleCardProps) => {
+  const handleCardClick = () => {
+    if (onClick) {
+      onClick();
+    }
+  };
+
   return (
-    <Card className="group hover:shadow-lg transition-all duration-300 hover:border-primary/50">
+    <Card className="group hover:shadow-lg transition-all duration-300 hover:border-primary/50 overflow-hidden">
+      {image_url && (
+        <div 
+          className="w-full h-48 bg-cover bg-center cursor-pointer" 
+          style={{ backgroundImage: `url(${image_url})` }}
+          onClick={handleCardClick}
+        />
+      )}
       <CardHeader>
         <div className="flex items-start justify-between gap-2">
-          <div className="flex-1">
+          <div className="flex-1 cursor-pointer" onClick={handleCardClick}>
             <CardTitle className="text-lg line-clamp-2 group-hover:text-primary transition-colors">
               {title}
             </CardTitle>
@@ -32,7 +49,7 @@ export const ArticleCard = ({
             )}
           </div>
         </div>
-        <CardDescription className="line-clamp-3 mt-2">
+        <CardDescription className="line-clamp-3 mt-2 cursor-pointer" onClick={handleCardClick}>
           {description}
         </CardDescription>
       </CardHeader>
@@ -40,13 +57,11 @@ export const ArticleCard = ({
         <Button
           variant="outline"
           size="sm"
-          asChild
+          onClick={handleCardClick}
           className="flex-1"
         >
-          <a href={url} target="_blank" rel="noopener noreferrer">
-            <ExternalLink className="mr-2 h-4 w-4" />
-            Leggi
-          </a>
+          <ExternalLink className="mr-2 h-4 w-4" />
+          Leggi
         </Button>
         {showSaveButton && onSave && (
           <Button

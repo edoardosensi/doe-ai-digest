@@ -14,11 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      articles: {
+        Row: {
+          category: string | null
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          published_at: string | null
+          source: string
+          title: string
+          url: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          published_at?: string | null
+          source: string
+          title: string
+          url: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          published_at?: string | null
+          source?: string
+          title?: string
+          url?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string | null
           display_name: string | null
           id: string
+          interests: string | null
           updated_at: string | null
           user_id: string
         }
@@ -26,6 +63,7 @@ export type Database = {
           created_at?: string | null
           display_name?: string | null
           id?: string
+          interests?: string | null
           updated_at?: string | null
           user_id: string
         }
@@ -33,6 +71,7 @@ export type Database = {
           created_at?: string | null
           display_name?: string | null
           id?: string
+          interests?: string | null
           updated_at?: string | null
           user_id?: string
         }
@@ -67,6 +106,35 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      user_clicks: {
+        Row: {
+          article_id: string
+          clicked_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          article_id: string
+          clicked_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          article_id?: string
+          clicked_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_clicks_article_id_fkey"
+            columns: ["article_id"]
+            isOneToOne: false
+            referencedRelation: "articles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

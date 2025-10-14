@@ -9,10 +9,13 @@ import { Loader2, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface Article {
+  id: string;
   title: string;
   description: string;
   url: string;
-  source?: string;
+  source: string;
+  image_url?: string;
+  published_at?: string;
 }
 
 const Dashboard = () => {
@@ -29,6 +32,8 @@ const Dashboard = () => {
       setUser(session?.user ?? null);
       if (!session?.user) {
         navigate("/auth");
+      } else {
+        loadRecommendedArticles();
       }
       setLoading(false);
     });
@@ -37,6 +42,8 @@ const Dashboard = () => {
       setUser(session?.user ?? null);
       if (!session?.user) {
         navigate("/auth");
+      } else {
+        loadRecommendedArticles();
       }
       setLoading(false);
     });
@@ -44,31 +51,45 @@ const Dashboard = () => {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
-  const generateSuggestions = async () => {
+  const loadRecommendedArticles = async () => {
     setGenerating(true);
     try {
-      const { data, error } = await supabase.functions.invoke('suggest-articles', {
-        body: { interests: interests || 'tecnologia, scienza, cultura' }
-      });
+      // First, fetch new articles from RSS feeds
+      await supabase.functions.invoke('fetch-articles');
+      
+      // Then get personalized recommendations
+      const { data, error } = await supabase.functions.invoke('recommend-articles');
 
       if (error) throw error;
 
       if (data?.articles) {
         setArticles(data.articles);
-        toast({
-          title: "Articoli generati!",
-          description: `Ecco ${data.articles.length} articoli selezionati per te`,
-        });
       }
     } catch (error: any) {
-      console.error('Error generating suggestions:', error);
+      console.error('Error loading articles:', error);
       toast({
         title: "Errore",
-        description: "Impossibile generare suggerimenti",
+        description: "Impossibile caricare gli articoli",
         variant: "destructive",
       });
     } finally {
       setGenerating(false);
+    }
+  };
+
+  const handleArticleClick = async (article: Article) => {
+    try {
+      // Track the click
+      await supabase.functions.invoke('track-click', {
+        body: { articleId: article.id }
+      });
+      
+      // Open article in new tab
+      window.open(article.url, '_blank');
+    } catch (error: any) {
+      console.error('Error tracking click:', error);
+      // Still open the article even if tracking fails
+      window.open(article.url, '_blank');
     }
   };
 
@@ -123,16 +144,10 @@ const Dashboard = () => {
             </p>
           </div>
 
-          {/* Interest Input */}
-          <div className="flex gap-2 max-w-2xl mx-auto">
-            <Input
-              placeholder="Es: tecnologia, scienza, cultura..."
-              value={interests}
-              onChange={(e) => setInterests(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && generateSuggestions()}
-            />
+          {/* Refresh Button */}
+          <div className="flex justify-center">
             <Button 
-              onClick={generateSuggestions}
+              onClick={loadRecommendedArticles}
               disabled={generating}
               className="gap-2"
             >
@@ -141,18 +156,20 @@ const Dashboard = () => {
               ) : (
                 <Sparkles className="h-4 w-4" />
               )}
-              Genera
+              Aggiorna Raccomandazioni
             </Button>
           </div>
 
           {/* Articles Grid */}
           {articles.length > 0 ? (
             <div className="grid md:grid-cols-2 gap-6">
-              {articles.map((article, index) => (
+              {articles.map((article) => (
                 <ArticleCard
-                  key={index}
+                  key={article.id}
                   {...article}
+                  image_url={article.image_url}
                   onSave={() => handleSaveArticle(article)}
+                  onClick={() => handleArticleClick(article)}
                 />
               ))}
             </div>
@@ -160,7 +177,7 @@ const Dashboard = () => {
             <div className="text-center py-12 space-y-4">
               <Sparkles className="h-12 w-12 mx-auto text-muted-foreground" />
               <p className="text-muted-foreground">
-                Inserisci i tuoi interessi e genera suggerimenti personalizzati
+                {generating ? "Caricamento articoli..." : "Nessun articolo disponibile"}
               </p>
             </div>
           )}
