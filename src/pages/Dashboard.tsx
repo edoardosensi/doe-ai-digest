@@ -25,17 +25,15 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [articles, setArticles] = useState<Article[]>([]);
   const [generating, setGenerating] = useState(false);
+  const [userProfile, setUserProfile] = useState<string | null>(null);
   
-  // Categorize articles
+  // Categorize articles into the 4 main categories
   const categorizeArticles = () => {
     const categories: Record<string, Article[]> = {
       'Politica': [],
-      'Cronaca': [],
-      'Economia': [],
+      'Politica estera': [],
       'Sport': [],
-      'Tecnologia': [],
-      'Cultura': [],
-      'Altro': []
+      'Cultura': []
     };
     
     articles.forEach(article => {
@@ -43,20 +41,20 @@ const Dashboard = () => {
       const desc = article.description?.toLowerCase() || '';
       const text = title + ' ' + desc;
       
-      if (text.match(/governo|politica|elezioni|partito|ministro|parlamento/)) {
+      if (text.match(/internazionale|mondo|esteri|usa|cina|russia|europa|onu|nato/)) {
+        categories['Politica estera'].push(article);
+      } else if (text.match(/governo|politica|elezioni|partito|ministro|parlamento/)) {
         categories['Politica'].push(article);
-      } else if (text.match(/cronaca|incidente|arresto|crimine|polizia|carabinieri/)) {
-        categories['Cronaca'].push(article);
-      } else if (text.match(/economia|mercato|borsa|impresa|industria|pil/)) {
-        categories['Economia'].push(article);
-      } else if (text.match(/sport|calcio|serie a|champions|olimpiadi|tennis/)) {
+      } else if (text.match(/sport|calcio|serie a|champions|olimpiadi|tennis|basket/)) {
         categories['Sport'].push(article);
-      } else if (text.match(/tecnologia|digitale|smartphone|app|software|internet/)) {
-        categories['Tecnologia'].push(article);
-      } else if (text.match(/cultura|cinema|libro|teatro|arte|musica/)) {
+      } else if (text.match(/cultura|cinema|libro|teatro|arte|musica|spettacolo/)) {
         categories['Cultura'].push(article);
       } else {
-        categories['Altro'].push(article);
+        // Distribute remaining articles evenly
+        const smallestCategory = Object.entries(categories).reduce((min, [key, val]) => 
+          val.length < categories[min].length ? key : min, 'Politica'
+        );
+        categories[smallestCategory].push(article);
       }
     });
     
@@ -100,6 +98,7 @@ const Dashboard = () => {
 
       if (data?.articles) {
         setArticles(data.articles);
+        setUserProfile(data.userProfile || null);
       }
     } catch (error: any) {
       console.error('Error loading articles:', error);
@@ -165,12 +164,12 @@ const Dashboard = () => {
   }
 
   const categorizedArticles = categorizeArticles();
-  const mainCategories = ['Politica', 'Cronaca', 'Economia', 'Sport'];
+  const categories = ['Politica', 'Politica estera', 'Sport', 'Cultura'];
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar user={user} />
-      
+      <Navbar user={user} userProfile={userProfile} />
+
       <main className="container mx-auto px-4 py-6 max-w-7xl">
         {/* Testata moderna */}
         <div className="mb-8 pb-6 border-b-2 border-primary">
@@ -198,7 +197,7 @@ const Dashboard = () => {
               className="gap-2"
             >
               <RefreshCw className={`h-4 w-4 ${generating ? 'animate-spin' : ''}`} />
-              Aggiorna
+              Rigenera
             </Button>
           </div>
         </div>
@@ -206,26 +205,22 @@ const Dashboard = () => {
         {generating ? (
           <div className="text-center py-20">
             <RefreshCw className="w-12 h-12 animate-spin mx-auto mb-4 text-muted-foreground" />
-            <p className="text-lg text-muted-foreground">Caricamento notizie in corso...</p>
+            <p className="text-lg text-muted-foreground">L'AI sta selezionando i migliori articoli per te...</p>
           </div>
         ) : articles.length > 0 ? (
-          <div className="space-y-16">
-            {/* Sezioni principali - Layout a griglia moderna */}
-            {mainCategories.map((category) => {
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            {categories.map((category) => {
               const categoryArticles = categorizedArticles[category];
-              if (categoryArticles.length === 0) return null;
               
               return (
-                <section key={category} className="animate-fade-in">
-                  <div className="flex items-center gap-4 mb-8">
-                    <div className="h-1 w-12 bg-accent"></div>
-                    <h2 className="text-4xl font-bold uppercase tracking-tight">
+                <div key={category} className="space-y-6">
+                  <div className="sticky top-20 z-10 bg-background py-2">
+                    <h2 className="text-2xl font-bold uppercase tracking-tight border-b-2 border-primary pb-2">
                       {category}
                     </h2>
-                    <div className="h-px flex-1 bg-border"></div>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    {categoryArticles.slice(0, 3).map((article) => (
+                  <div className="space-y-6">
+                    {categoryArticles.slice(0, 4).map((article) => (
                       <ArticleCard
                         key={article.id}
                         {...article}
@@ -234,40 +229,15 @@ const Dashboard = () => {
                         onClick={() => handleArticleClick(article)}
                       />
                     ))}
+                    {categoryArticles.length === 0 && (
+                      <p className="text-sm text-muted-foreground italic">
+                        Nessun articolo disponibile
+                      </p>
+                    )}
                   </div>
-                </section>
+                </div>
               );
             })}
-
-            {/* Sezioni secondarie - Layout più compatto */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
-              {['Tecnologia', 'Cultura', 'Altro'].map((category) => {
-                const categoryArticles = categorizedArticles[category];
-                if (categoryArticles.length === 0) return null;
-                
-                return (
-                  <section key={category} className="animate-fade-in">
-                    <div className="flex items-center gap-3 mb-6">
-                      <div className="h-px w-8 bg-accent"></div>
-                      <h2 className="text-2xl font-bold uppercase tracking-tight">
-                        {category}
-                      </h2>
-                    </div>
-                    <div className="space-y-6">
-                      {categoryArticles.slice(0, 2).map((article) => (
-                        <ArticleCard
-                          key={article.id}
-                          {...article}
-                          image_url={article.image_url}
-                          onSave={() => handleSaveArticle(article)}
-                          onClick={() => handleArticleClick(article)}
-                        />
-                      ))}
-                    </div>
-                  </section>
-                );
-              })}
-            </div>
           </div>
         ) : (
           <div className="text-center py-20 space-y-4">

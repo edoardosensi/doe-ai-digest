@@ -91,15 +91,23 @@ serve(async (req) => {
             },
             { 
               role: 'user', 
-              content: `L'utente ha cliccato questi articoli: ${clickedArticlesInfo}. 
+          content: `L'utente ha cliccato questi articoli: ${clickedArticlesInfo}. 
               
-Dalla seguente lista di articoli disponibili, seleziona i 10 URL più rilevanti per l'utente in ordine di rilevanza.
+Dalla seguente lista di articoli disponibili, seleziona 16 URL (4 per ogni categoria: Politica, Politica estera, Sport, Cultura) più rilevanti per l'utente.
 
 Articoli disponibili:
 ${allArticles.map(a => `URL: ${a.url}, Titolo: ${a.title}, Fonte: ${a.source}`).join('\n')}
 
-Restituisci SOLO un array JSON con gli URL selezionati in questo formato:
-["url1", "url2", "url3", ...]`
+Restituisci un oggetto JSON con questa struttura:
+{
+  "articles": {
+    "Politica": ["url1", "url2", "url3", "url4"],
+    "Politica estera": ["url1", "url2", "url3", "url4"],
+    "Sport": ["url1", "url2", "url3", "url4"],
+    "Cultura": ["url1", "url2", "url3", "url4"]
+  },
+  "userProfile": "Una descrizione in italiano di 3-4 righe che spiega gli interessi dell'utente basandosi sui suoi click, il tipo di notizie che preferisce, e come selezioni gli articoli per lui."
+}`
             }
           ],
         }),
@@ -111,25 +119,42 @@ Restituisci SOLO un array JSON con gli URL selezionati in questo formato:
         content = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
         
         try {
-          const recommendedUrls = JSON.parse(content);
-          recommendedArticles = allArticles.filter(a => recommendedUrls.includes(a.url)).slice(0, 10);
+          const aiResponse = JSON.parse(content);
+          const categorizedUrls = aiResponse.articles;
+          const userProfile = aiResponse.userProfile;
+          
+          // Flatten all URLs and filter articles
+          const allUrls = Object.values(categorizedUrls).flat();
+          recommendedArticles = allArticles.filter(a => allUrls.includes(a.url)).slice(0, 16);
+          
+          return new Response(
+            JSON.stringify({ 
+              articles: recommendedArticles,
+              userProfile: userProfile,
+              categories: categorizedUrls
+            }), 
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
         } catch (parseError) {
           console.error('Failed to parse AI response:', parseError);
           // Fallback to random articles
-          recommendedArticles = allArticles.sort(() => Math.random() - 0.5).slice(0, 10);
+          recommendedArticles = allArticles.sort(() => Math.random() - 0.5).slice(0, 16);
         }
       } else {
         // Fallback to random articles
-        recommendedArticles = allArticles.sort(() => Math.random() - 0.5).slice(0, 10);
+        recommendedArticles = allArticles.sort(() => Math.random() - 0.5).slice(0, 16);
       }
     } else {
       // Not enough history - return random articles
       console.log('Not enough click history, returning random articles');
-      recommendedArticles = allArticles.sort(() => Math.random() - 0.5).slice(0, 10);
+      recommendedArticles = allArticles.sort(() => Math.random() - 0.5).slice(0, 16);
     }
 
     return new Response(
-      JSON.stringify({ articles: recommendedArticles }), 
+      JSON.stringify({ 
+        articles: recommendedArticles,
+        userProfile: clicks && clicks.length >= 5 ? null : "Non abbiamo ancora abbastanza dati per creare il tuo profilo. Continua a leggere articoli per permetterci di conoscerti meglio!"
+      }), 
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       }

@@ -9,12 +9,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
+import { UserProfileDialog } from "./UserProfileDialog";
 
 interface NavbarProps {
   user?: any;
+  userProfile?: string | null;
 }
 
-export const Navbar = ({ user }: NavbarProps) => {
+export const Navbar = ({ user, userProfile }: NavbarProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -37,12 +39,13 @@ export const Navbar = ({ user }: NavbarProps) => {
           </span>
         </Link>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
           {user ? (
             <>
               <Button variant="ghost" asChild>
                 <Link to="/dashboard">Dashboard</Link>
               </Button>
+              <UserProfileDialog userProfile={userProfile} />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon">
