@@ -216,6 +216,7 @@ export type Database = {
           enabled: boolean | null
           id: string
           name: string
+          section_name: string | null
           url: string
           user_id: string
         }
@@ -224,6 +225,7 @@ export type Database = {
           enabled?: boolean | null
           id?: string
           name: string
+          section_name?: string | null
           url: string
           user_id: string
         }
@@ -232,6 +234,7 @@ export type Database = {
           enabled?: boolean | null
           id?: string
           name?: string
+          section_name?: string | null
           url?: string
           user_id?: string
         }

@@ -162,7 +162,7 @@ const Sections = () => {
           id: userFeed.id,
           name: userFeed.name,
           url: userFeed.url,
-          section_name: '', // User feeds don't have sections initially
+          section_name: userFeed.section_name || '',
           is_default: false,
           enabled: userFeed.enabled,
           created_at: userFeed.created_at,
@@ -315,6 +315,7 @@ const Sections = () => {
           user_id: user.id,
           name: newFeedName,
           url: newFeedUrl,
+          section_name: newFeedSection,
           enabled: true
         })
         .select()
