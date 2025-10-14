@@ -233,6 +233,9 @@ const Dashboard = () => {
             {enabledSections.map((category) => {
               const categoryArticles = categorizedArticles[category] || [];
               
+              // Skip sections with no articles
+              if (categoryArticles.length === 0) return null;
+              
               return (
                 <div key={category} className="flex flex-col">
                   <div className="pb-4 mb-6 border-b-2 border-primary">
