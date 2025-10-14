@@ -28,7 +28,7 @@ const Dashboard = () => {
   const [generating, setGenerating] = useState(false);
   const [userProfile, setUserProfile] = useState<string | null>(null);
   
-  // Use AI-provided categories or fallback to simple categorization
+  // Use AI-provided categories directly from backend
   const categorizeArticles = () => {
     const categories: Record<string, Article[]> = {
       'Politica': [],
@@ -37,31 +37,16 @@ const Dashboard = () => {
       'Cultura': []
     };
     
+    // Use the category already assigned by the AI in the backend
     articles.forEach(article => {
-      // If AI already categorized it, use that category
       if (article.category && categories[article.category]) {
         categories[article.category].push(article);
       } else {
-        // Fallback categorization
-        const title = article.title.toLowerCase();
-        const desc = article.description?.toLowerCase() || '';
-        const text = title + ' ' + desc;
-        
-        if (text.match(/internazionale|mondo|esteri|usa|cina|russia|europa|onu|nato|biden|trump|putin|gaza|israele|ucraina/)) {
-          categories['Politica estera'].push(article);
-        } else if (text.match(/governo|politica|elezioni|partito|ministro|parlamento|meloni|salvini|schlein|conte/)) {
-          categories['Politica'].push(article);
-        } else if (text.match(/sport|calcio|serie a|champions|olimpiadi|tennis|basket|formula 1|juventus|milan|inter|napoli/)) {
-          categories['Sport'].push(article);
-        } else if (text.match(/cultura|cinema|libro|teatro|arte|musica|spettacolo|festival|mostra|concert/)) {
-          categories['Cultura'].push(article);
-        } else {
-          // Distribute remaining articles evenly
-          const smallestCategory = Object.entries(categories).reduce((min, [key, val]) => 
-            val.length < categories[min].length ? key : min, 'Politica'
-          );
-          categories[smallestCategory].push(article);
-        }
+        // Fallback: if no category, put in smallest category
+        const smallestCategory = Object.entries(categories).reduce((min, [key, val]) => 
+          val.length < categories[min].length ? key : min, 'Politica'
+        );
+        categories[smallestCategory].push(article);
       }
     });
     
