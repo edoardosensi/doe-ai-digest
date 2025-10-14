@@ -1,106 +1,200 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { BookOpen, Sparkles, Brain, Zap } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Newspaper } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { Navbar } from "@/components/Navbar";
+import { useToast } from "@/hooks/use-toast";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Index = () => {
   const navigate = useNavigate();
-  const [user, setUser] = useState<any>(null);
+  const { toast } = useToast();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session?.user) {
+        navigate("/dashboard");
+      }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        navigate("/dashboard");
+      }
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [navigate]);
 
-  const handleGetStarted = () => {
-    if (user) {
-      navigate("/dashboard");
-    } else {
-      navigate("/auth");
+  const handleSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Benvenuto!",
+        description: "Accesso effettuato con successo",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Errore",
+        description: error.message || "Impossibile effettuare l'accesso",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/dashboard`,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data.user) {
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert([{ user_id: data.user.id, display_name: displayName }]);
+
+        if (profileError) {
+          console.error('Profile creation error:', profileError);
+        }
+      }
+
+      toast({
+        title: "Registrazione completata!",
+        description: "Controlla la tua email per confermare la registrazione.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Errore",
+        description: error.message || "Impossibile completare la registrazione",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-primary/10">
-      <Navbar user={user} />
-      
-      {/* Hero Section */}
-      <section className="container mx-auto px-4 pt-32 pb-20">
-        <div className="max-w-4xl mx-auto text-center space-y-8">
-          <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium">
-            <Sparkles className="h-4 w-4" />
-            Powered by AI
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <div className="w-full max-w-md space-y-8">
+        {/* Header con logo */}
+        <div className="text-center space-y-2">
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <Newspaper className="w-12 h-12 text-primary" />
           </div>
-          
-          <h1 className="text-5xl md:text-7xl font-bold leading-tight">
-            Scopri articoli{" "}
-            <span className="bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
-              personalizzati
-            </span>
-            {" "}per te
+          <h1 className="text-6xl font-heading font-bold tracking-tight text-foreground">
+            Doe
           </h1>
-          
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            L'intelligenza artificiale seleziona i contenuti più interessanti dal web, 
-            in base ai tuoi interessi. Semplice, veloce, contemporaneo.
+          <p className="text-sm text-muted-foreground italic">
+            Il tuo assistente AI per scoprire articoli interessanti
           </p>
-
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4">
-            <Button 
-              size="lg" 
-              onClick={handleGetStarted}
-              className="gap-2 text-lg px-8 shadow-lg hover:shadow-xl transition-all"
-            >
-              <Zap className="h-5 w-5" />
-              {user ? "Vai alla Dashboard" : "Inizia Ora"}
-            </Button>
-          </div>
         </div>
-      </section>
 
-      {/* Features Section */}
-      <section className="container mx-auto px-4 py-20">
-        <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-          <div className="text-center space-y-4 p-6 rounded-xl bg-card hover:shadow-lg transition-all">
-            <div className="mx-auto w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
-              <Brain className="h-6 w-6 text-primary" />
-            </div>
-            <h3 className="text-xl font-semibold">AI Intelligente</h3>
-            <p className="text-muted-foreground">
-              Algoritmi avanzati analizzano i tuoi interessi per suggerimenti mirati
-            </p>
-          </div>
+        {/* Form di autenticazione */}
+        <div className="bg-card border border-border rounded-lg p-6 shadow-sm">
+          <Tabs defaultValue="signin" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 mb-6">
+              <TabsTrigger value="signin">Accedi</TabsTrigger>
+              <TabsTrigger value="signup">Registrati</TabsTrigger>
+            </TabsList>
 
-          <div className="text-center space-y-4 p-6 rounded-xl bg-card hover:shadow-lg transition-all">
-            <div className="mx-auto w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
-              <BookOpen className="h-6 w-6 text-primary" />
-            </div>
-            <h3 className="text-xl font-semibold">Contenuti Curati</h3>
-            <p className="text-muted-foreground">
-              Articoli selezionati dalle migliori fonti del web
-            </p>
-          </div>
+            <TabsContent value="signin">
+              <form onSubmit={handleSignIn} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="signin-email">Email</Label>
+                  <Input
+                    id="signin-email"
+                    type="email"
+                    placeholder="tua@email.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signin-password">Password</Label>
+                  <Input
+                    id="signin-password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? "Accesso in corso..." : "Accedi"}
+                </Button>
+              </form>
+            </TabsContent>
 
-          <div className="text-center space-y-4 p-6 rounded-xl bg-card hover:shadow-lg transition-all">
-            <div className="mx-auto w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
-              <Sparkles className="h-6 w-6 text-primary" />
-            </div>
-            <h3 className="text-xl font-semibold">Sempre Aggiornato</h3>
-            <p className="text-muted-foreground">
-              Nuovi suggerimenti ogni volta che accedi
-            </p>
-          </div>
+            <TabsContent value="signup">
+              <form onSubmit={handleSignUp} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="signup-name">Nome</Label>
+                  <Input
+                    id="signup-name"
+                    type="text"
+                    placeholder="Il tuo nome"
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signup-email">Email</Label>
+                  <Input
+                    id="signup-email"
+                    type="email"
+                    placeholder="tua@email.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signup-password">Password</Label>
+                  <Input
+                    id="signup-password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? "Registrazione in corso..." : "Registrati"}
+                </Button>
+              </form>
+            </TabsContent>
+          </Tabs>
         </div>
-      </section>
+      </div>
     </div>
   );
 };
