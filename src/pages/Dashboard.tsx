@@ -4,9 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Navbar } from "@/components/Navbar";
 import { ArticleCard } from "@/components/ArticleCard";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Loader2, Sparkles } from "lucide-react";
+import { Loader2, Sparkles, Newspaper } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Separator } from "@/components/ui/separator";
 
 interface Article {
   id: string;
@@ -24,8 +24,44 @@ const Dashboard = () => {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [articles, setArticles] = useState<Article[]>([]);
-  const [interests, setInterests] = useState("");
   const [generating, setGenerating] = useState(false);
+  
+  // Categorize articles
+  const categorizeArticles = () => {
+    const categories: Record<string, Article[]> = {
+      'Politica': [],
+      'Cronaca': [],
+      'Economia': [],
+      'Sport': [],
+      'Tecnologia': [],
+      'Cultura': [],
+      'Altro': []
+    };
+    
+    articles.forEach(article => {
+      const title = article.title.toLowerCase();
+      const desc = article.description?.toLowerCase() || '';
+      const text = title + ' ' + desc;
+      
+      if (text.match(/governo|politica|elezioni|partito|ministro|parlamento/)) {
+        categories['Politica'].push(article);
+      } else if (text.match(/cronaca|incidente|arresto|crimine|polizia|carabinieri/)) {
+        categories['Cronaca'].push(article);
+      } else if (text.match(/economia|mercato|borsa|impresa|industria|pil/)) {
+        categories['Economia'].push(article);
+      } else if (text.match(/sport|calcio|serie a|champions|olimpiadi|tennis/)) {
+        categories['Sport'].push(article);
+      } else if (text.match(/tecnologia|digitale|smartphone|app|software|internet/)) {
+        categories['Tecnologia'].push(article);
+      } else if (text.match(/cultura|cinema|libro|teatro|arte|musica/)) {
+        categories['Cultura'].push(article);
+      } else {
+        categories['Altro'].push(article);
+      }
+    });
+    
+    return categories;
+  };
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -122,66 +158,123 @@ const Dashboard = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
+  const categorizedArticles = categorizeArticles();
+  const mainCategories = ['Politica', 'Cronaca', 'Economia', 'Sport'];
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-primary/10">
+    <div className="min-h-screen bg-background">
       <Navbar user={user} />
       
-      <main className="container mx-auto px-4 pt-24 pb-12">
-        <div className="max-w-4xl mx-auto space-y-8">
-          {/* Header */}
-          <div className="text-center space-y-4">
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
-              I Tuoi Articoli Personalizzati
+      <main className="container mx-auto px-4 pt-20 pb-12">
+        {/* Testata Giornalistica */}
+        <div className="border-y-4 border-foreground py-6 mb-8">
+          <div className="text-center space-y-2">
+            <div className="flex items-center justify-center gap-3">
+              <Separator className="flex-1 bg-foreground" />
+              <Newspaper className="h-8 w-8 text-foreground" />
+              <Separator className="flex-1 bg-foreground" />
+            </div>
+            <h1 className="text-6xl font-serif font-black text-foreground tracking-tight" style={{ fontFamily: 'Georgia, serif' }}>
+              DOE.ONL
             </h1>
-            <p className="text-muted-foreground">
-              Lascia che l'AI ti suggerisca contenuti interessanti
+            <p className="text-sm font-serif italic text-muted-foreground">
+              {new Date().toLocaleDateString('it-IT', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+            </p>
+            <div className="flex items-center justify-center gap-3">
+              <Separator className="flex-1 bg-foreground" />
+              <span className="text-xs font-serif text-muted-foreground">★ EDIZIONE PERSONALIZZATA ★</span>
+              <Separator className="flex-1 bg-foreground" />
+            </div>
+          </div>
+        </div>
+
+        {/* Pulsante Aggiorna */}
+        <div className="flex justify-center mb-8">
+          <Button 
+            onClick={loadRecommendedArticles}
+            disabled={generating}
+            variant="outline"
+            className="gap-2 border-2 border-foreground font-serif"
+          >
+            {generating ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Sparkles className="h-4 w-4" />
+            )}
+            Aggiorna Notizie
+          </Button>
+        </div>
+
+        {articles.length > 0 ? (
+          <div className="space-y-12">
+            {/* Sezioni Principali */}
+            {mainCategories.map((category) => {
+              const categoryArticles = categorizedArticles[category];
+              if (categoryArticles.length === 0) return null;
+              
+              return (
+                <section key={category} className="space-y-4">
+                  <div className="border-b-2 border-foreground pb-2">
+                    <h2 className="text-3xl font-serif font-bold text-foreground uppercase tracking-wide">
+                      {category}
+                    </h2>
+                  </div>
+                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {categoryArticles.slice(0, 3).map((article) => (
+                      <ArticleCard
+                        key={article.id}
+                        {...article}
+                        image_url={article.image_url}
+                        onSave={() => handleSaveArticle(article)}
+                        onClick={() => handleArticleClick(article)}
+                      />
+                    ))}
+                  </div>
+                </section>
+              );
+            })}
+
+            {/* Altre Sezioni */}
+            {['Tecnologia', 'Cultura', 'Altro'].map((category) => {
+              const categoryArticles = categorizedArticles[category];
+              if (categoryArticles.length === 0) return null;
+              
+              return (
+                <section key={category} className="space-y-4">
+                  <div className="border-b border-foreground pb-2">
+                    <h3 className="text-2xl font-serif font-bold text-foreground uppercase">
+                      {category}
+                    </h3>
+                  </div>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    {categoryArticles.slice(0, 2).map((article) => (
+                      <ArticleCard
+                        key={article.id}
+                        {...article}
+                        image_url={article.image_url}
+                        onSave={() => handleSaveArticle(article)}
+                        onClick={() => handleArticleClick(article)}
+                      />
+                    ))}
+                  </div>
+                </section>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="text-center py-12 space-y-4 border-2 border-dashed border-foreground/30 rounded p-8">
+            <Newspaper className="h-16 w-16 mx-auto text-muted-foreground" />
+            <p className="text-lg font-serif text-foreground">
+              {generating ? "Caricamento delle notizie in corso..." : "Nessuna notizia disponibile al momento"}
             </p>
           </div>
-
-          {/* Refresh Button */}
-          <div className="flex justify-center">
-            <Button 
-              onClick={loadRecommendedArticles}
-              disabled={generating}
-              className="gap-2"
-            >
-              {generating ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Sparkles className="h-4 w-4" />
-              )}
-              Aggiorna Raccomandazioni
-            </Button>
-          </div>
-
-          {/* Articles Grid */}
-          {articles.length > 0 ? (
-            <div className="grid md:grid-cols-2 gap-6">
-              {articles.map((article) => (
-                <ArticleCard
-                  key={article.id}
-                  {...article}
-                  image_url={article.image_url}
-                  onSave={() => handleSaveArticle(article)}
-                  onClick={() => handleArticleClick(article)}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-12 space-y-4">
-              <Sparkles className="h-12 w-12 mx-auto text-muted-foreground" />
-              <p className="text-muted-foreground">
-                {generating ? "Caricamento articoli..." : "Nessun articolo disponibile"}
-              </p>
-            </div>
-          )}
-        </div>
+        )}
       </main>
     </div>
   );
