@@ -11,6 +11,7 @@ import {
 } from "./ui/dropdown-menu";
 import { UserProfileDialog } from "./UserProfileDialog";
 import { ClickedArticlesDialog } from "./ClickedArticlesDialog";
+import { SavedArticlesDialog } from "./SavedArticlesDialog";
 
 interface NavbarProps {
   user?: any;
@@ -48,6 +49,7 @@ export const Navbar = ({ user, userProfile }: NavbarProps) => {
               </Button>
               <UserProfileDialog userProfile={userProfile} userId={user.id} />
               <ClickedArticlesDialog userId={user.id} />
+              <SavedArticlesDialog userId={user.id} />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon">
