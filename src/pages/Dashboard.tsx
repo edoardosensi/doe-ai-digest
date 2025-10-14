@@ -113,6 +113,15 @@ const Dashboard = () => {
       if (data?.articles) {
         setArticles(data.articles);
         setUserProfile(data.userProfile || null);
+        
+        // Show warning if in fallback mode
+        if (data.fallbackMode && data.message) {
+          toast({
+            title: "Modalità limitata",
+            description: data.message,
+            variant: "default",
+          });
+        }
       }
       
       // Reload custom profile to get the AI-updated version

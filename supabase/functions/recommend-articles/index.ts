@@ -82,6 +82,20 @@ serve(async (req) => {
       );
     }
 
+    // Helper function to return fallback articles
+    const returnFallbackArticles = (message: string) => {
+      console.log('Using fallback mode:', message);
+      const fallbackArticles = allArticles.slice(0, 16);
+      return new Response(
+        JSON.stringify({ 
+          articles: fallbackArticles,
+          fallbackMode: true,
+          message: message
+        }), 
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    };
+
     let recommendedArticles = [];
 
     // Always try to use AI for recommendations if there are ANY clicks
@@ -228,100 +242,104 @@ Restituisci SOLO questo JSON (senza markdown):
   "userProfile": "LA BOLLA: [Profilo dettagliato 5-7 righe che descrive PRECISAMENTE la psicologia del lettore, i suoi interessi profondi, pattern nascosti, e previsioni future. Basato su ${clicks.length} click analizzati. ${existingProfile ? 'Aggiornato e raffinato dal profilo precedente.' : 'Profilo iniziale costruito.'}]"
 }`;
 
-      const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'google/gemini-2.5-flash',
-          messages: [
-            { 
-              role: 'system', 
-              content: systemPrompt
-            },
-            { 
-              role: 'user', 
-              content: userPrompt
-            }
-          ],
-        }),
-      });
+      try {
+        const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'google/gemini-2.5-flash',
+            messages: [
+              { 
+                role: 'system', 
+                content: systemPrompt
+              },
+              { 
+                role: 'user', 
+                content: userPrompt
+              }
+            ],
+          }),
+        });
 
-      if (response.ok) {
+        if (response.status === 402) {
+          // AI credits exhausted - return fallback immediately
+          return returnFallbackArticles('Crediti AI esauriti. Mostrando articoli recenti.');
+        }
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('AI API error:', response.status, errorText);
+          return returnFallbackArticles('Errore temporaneo. Mostrando articoli recenti.');
+        }
+
         const data = await response.json();
         let content = data.choices[0].message.content;
         content = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
         
-        try {
-          const aiResponse = JSON.parse(content);
-          const categorizedUrls = aiResponse.articles;
-          const userProfile = aiResponse.userProfile;
+        const aiResponse = JSON.parse(content);
+        const categorizedUrls = aiResponse.articles;
+        const userProfile = aiResponse.userProfile;
+        
+        // Save the AI-generated profile to the database ONLY if user hasn't customized it
+        if (userProfile && !hasCustomProfile) {
+          const { error: profileError } = await supabaseClient
+            .from('profiles')
+            .update({ custom_profile: userProfile })
+            .eq('user_id', user.id);
           
-          // Save the AI-generated profile to the database ONLY if user hasn't customized it
-          // If user has customized profile, we keep it and don't overwrite
-          if (userProfile && !hasCustomProfile) {
-            const { error: profileError } = await supabaseClient
-              .from('profiles')
-              .update({ custom_profile: userProfile })
-              .eq('user_id', user.id);
-            
-            if (profileError) {
-              console.error('Error updating user profile:', profileError);
-            } else {
-              console.log('User profile updated successfully');
-            }
-          } else if (hasCustomProfile) {
-            console.log('User has custom profile - skipping auto-update to preserve user preferences');
+          if (profileError) {
+            console.error('Error updating user profile:', profileError);
+          } else {
+            console.log('User profile updated successfully');
           }
-          
-          // Build categorized articles array with category tag
-          const categorizedArticles = [];
-          for (const [category, urls] of Object.entries(categorizedUrls)) {
-            const categoryArticles = allArticles
-              .filter(a => (urls as string[]).includes(a.url))
-              .map(a => ({ ...a, category }));
-            categorizedArticles.push(...categoryArticles);
-          }
-          
-          return new Response(
-            JSON.stringify({ 
-              articles: categorizedArticles,
-              userProfile: userProfile
-            }), 
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        } catch (parseError) {
-          console.error('Failed to parse AI response:', parseError, 'Content:', content);
-          // Fallback to random articles
-          recommendedArticles = allArticles.sort(() => Math.random() - 0.5).slice(0, 16);
+        } else if (hasCustomProfile) {
+          console.log('User has custom profile - skipping auto-update to preserve user preferences');
         }
-      } else {
-        console.error('AI API error:', response.status, await response.text());
-        // Fallback to random articles
-        recommendedArticles = allArticles.sort(() => Math.random() - 0.5).slice(0, 16);
+        
+        // Build categorized articles array with category tag
+        const categorizedArticles = [];
+        for (const [category, urls] of Object.entries(categorizedUrls)) {
+          const categoryArticles = allArticles
+            .filter(a => (urls as string[]).includes(a.url))
+            .map(a => ({ ...a, category }));
+          categorizedArticles.push(...categoryArticles);
+        }
+        
+        return new Response(
+          JSON.stringify({ 
+            articles: categorizedArticles,
+            userProfile: userProfile
+          }), 
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      } catch (error) {
+        console.error('AI processing error:', error);
+        return returnFallbackArticles('Errore temporaneo. Mostrando articoli recenti.');
       }
     } else {
-      // Not enough history - use AI to categorize based on titles
+      // Not enough history - use AI to categorize or fallback
       console.log('Not enough click history, using AI to categorize articles');
       
-      const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'google/gemini-2.5-flash',
-          messages: [
-            { 
-              role: 'system', 
-              content: 'Sei un esperto giornalista italiano. Devi categorizzare accuratamente gli articoli di notizie in base al loro titolo e descrizione.'
-            },
-            { 
-              role: 'user', 
-              content: `Categorizza questi articoli nelle categorie abilitate dall'utente: ${enabledSections.join(', ')}
+      try {
+        const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'google/gemini-2.5-flash',
+            messages: [
+              { 
+                role: 'system', 
+                content: 'Sei un esperto giornalista italiano. Devi categorizzare accuratamente gli articoli di notizie in base al loro titolo e descrizione.'
+              },
+              { 
+                role: 'user', 
+                content: `Categorizza questi articoli nelle categorie abilitate dall'utente: ${enabledSections.join(', ')}
 
 Analizza ATTENTAMENTE il titolo e la descrizione di ogni articolo per determinare la categoria corretta.
 
@@ -346,123 +364,40 @@ Restituisci SOLO questo JSON (senza markdown):
     ${enabledSections.map(s => `"${s}": ["url1", "url2", "url3", "url4"]`).join(',\n    ')}
   }
 }`
-            }
-          ],
-        }),
-      });
+              }
+            ],
+          }),
+        });
 
-      if (response.ok) {
+        if (response.status === 402) {
+          // AI credits exhausted - return fallback immediately
+          return returnFallbackArticles('Crediti AI esauriti. Mostrando articoli recenti.');
+        }
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('AI API error:', response.status, errorText);
+          return returnFallbackArticles('Errore temporaneo. Mostrando articoli recenti.');
+        }
+
         const data = await response.json();
         let content = data.choices[0].message.content;
         content = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
         
-        try {
-          const aiResponse = JSON.parse(content);
-          const categorizedUrls = aiResponse.articles;
-          
-          // Build categorized articles array with category tag
-          recommendedArticles = [];
-          for (const [category, urls] of Object.entries(categorizedUrls)) {
-            const categoryArticles = allArticles
-              .filter(a => (urls as string[]).includes(a.url))
-              .map(a => ({ ...a, category }));
-            recommendedArticles.push(...categoryArticles);
-          }
-        } catch (parseError) {
-          console.error('Failed to parse AI response:', parseError, 'Content:', content);
-          // Fallback to keyword-based categorization
-          const categories: Record<string, any[]> = {};
-          enabledSections.forEach(s => categories[s] = []);
-          
-          const keywords: Record<string, string[]> = {
-            'Politica': ['governo', 'ministro', 'parlamento', 'meloni', 'salvini', 'elezioni', 'partito'],
-            'Politica estera': ['guerra', 'ucraina', 'gaza', 'nato', 'biden', 'trump', 'putin'],
-            'Sport': ['calcio', 'tennis', 'serie a', 'champions', 'milan', 'inter', 'juventus'],
-            'Cultura': ['cinema', 'film', 'teatro', 'musica', 'arte', 'festival'],
-            'Roma': ['roma', 'campidoglio', 'comune', 'gualtieri'],
-            'Filosofia': ['filosofia', 'filosofo', 'filosofica', 'filosofico', 'platone', 'aristotele', 'kant', 'nietzsche', 'hegel', 'cartesio', 'stoicismo', 'esistenzialismo', 'fenomenologia', 'etica', 'metafisica', 'epistemologia', 'ontologia'],
-            'Scienza': ['scienza', 'ricerca', 'studio', 'scoperta'],
-            'Televisione': ['televisione', 'tv', 'rai', 'mediaset'],
-            'Stampa internazionale': ['internazionale', 'esteri', 'mondo']
-          };
-          
-          allArticles.forEach(article => {
-            const text = `${article.title} ${article.description || ''}`.toLowerCase();
-            let assigned = false;
-            
-            for (const section of enabledSections) {
-              const sectionKeywords = keywords[section] || [];
-              if (sectionKeywords.some(kw => text.includes(kw))) {
-                categories[section].push({ ...article, category: section });
-                assigned = true;
-                break;
-              }
-            }
-            
-            if (!assigned && enabledSections.length > 0) {
-              const smallestCat = Object.entries(categories)
-                .reduce((min, [key, val]) => val.length < categories[min].length ? key : min, enabledSections[0]);
-              categories[smallestCat].push({ ...article, category: smallestCat });
-            }
-          });
-          
-          recommendedArticles = [];
-          for (const [category, articles] of Object.entries(categories)) {
-            const categoryArticles = articles.slice(0, 4);
-            while (categoryArticles.length < 4 && articles.length > 0) {
-              categoryArticles.push(articles[categoryArticles.length % articles.length]);
-            }
-            recommendedArticles.push(...categoryArticles);
-          }
-          recommendedArticles = recommendedArticles.slice(0, enabledSections.length * 4);
-        }
-      } else {
-        console.error('AI API error:', response.status, await response.text());
-        // Fallback to keyword-based categorization
-        const categories: Record<string, any[]> = {};
-        enabledSections.forEach(s => categories[s] = []);
+        const aiResponse = JSON.parse(content);
+        const categorizedUrls = aiResponse.articles;
         
-        const keywords: Record<string, string[]> = {
-          'Politica': ['governo', 'ministro', 'parlamento', 'meloni', 'salvini', 'elezioni', 'partito'],
-          'Politica estera': ['guerra', 'ucraina', 'gaza', 'nato', 'biden', 'trump', 'putin'],
-          'Sport': ['calcio', 'tennis', 'serie a', 'champions', 'milan', 'inter', 'juventus'],
-          'Cultura': ['cinema', 'film', 'teatro', 'musica', 'arte', 'festival'],
-          'Roma': ['roma', 'campidoglio', 'comune', 'gualtieri'],
-          'Filosofia': ['filosofia', 'filosofo', 'filosofica', 'filosofico', 'platone', 'aristotele', 'kant', 'nietzsche', 'hegel', 'cartesio', 'stoicismo', 'esistenzialismo', 'fenomenologia', 'etica', 'metafisica', 'epistemologia', 'ontologia'],
-          'Scienza': ['scienza', 'ricerca', 'studio', 'scoperta'],
-          'Televisione': ['televisione', 'tv', 'rai', 'mediaset'],
-          'Stampa internazionale': ['internazionale', 'esteri', 'mondo']
-        };
-        
-        allArticles.forEach(article => {
-          const text = `${article.title} ${article.description || ''}`.toLowerCase();
-          let assigned = false;
-          
-          for (const section of enabledSections) {
-            const sectionKeywords = keywords[section] || [];
-            if (sectionKeywords.some(kw => text.includes(kw))) {
-              categories[section].push({ ...article, category: section });
-              assigned = true;
-              break;
-            }
-          }
-          
-          if (!assigned && enabledSections.length > 0) {
-            const smallestCat = Object.entries(categories)
-              .reduce((min, [key, val]) => val.length < categories[min].length ? key : min, enabledSections[0]);
-            categories[smallestCat].push({ ...article, category: smallestCat });
-          }
-        });
-        
+        // Build categorized articles array with category tag
         recommendedArticles = [];
-        for (const [category, articles] of Object.entries(categories)) {
-          const categoryArticles = articles.slice(0, 4);
-          while (categoryArticles.length < 4 && articles.length > 0) {
-            categoryArticles.push(articles[categoryArticles.length % articles.length]);
-          }
+        for (const [category, urls] of Object.entries(categorizedUrls)) {
+          const categoryArticles = allArticles
+            .filter(a => (urls as string[]).includes(a.url))
+            .map(a => ({ ...a, category }));
           recommendedArticles.push(...categoryArticles);
         }
-        recommendedArticles = recommendedArticles.slice(0, enabledSections.length * 4);
+      } catch (error) {
+        console.error('AI categorization error:', error);
+        return returnFallbackArticles('Errore temporaneo. Mostrando articoli recenti.');
       }
     }
 
