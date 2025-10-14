@@ -26,7 +26,6 @@ interface RssFeed {
 export const UserProfileDialog = ({ userProfile, userId }: UserProfileDialogProps) => {
   const { toast } = useToast();
   const [customProfile, setCustomProfile] = useState("");
-  const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [defaultFeeds, setDefaultFeeds] = useState<RssFeed[]>([]);
   const [userFeeds, setUserFeeds] = useState<RssFeed[]>([]);
@@ -38,6 +37,13 @@ export const UserProfileDialog = ({ userProfile, userId }: UserProfileDialogProp
     loadCustomProfile();
     loadFeeds();
   }, [userId]);
+
+  // Sync customProfile with userProfile when it updates
+  useEffect(() => {
+    if (userProfile && !customProfile) {
+      setCustomProfile(userProfile);
+    }
+  }, [userProfile]);
 
   const loadCustomProfile = async () => {
     const { data } = await supabase
@@ -80,14 +86,13 @@ export const UserProfileDialog = ({ userProfile, userId }: UserProfileDialogProp
       if (error) throw error;
 
       toast({
-        title: "Salvato!",
-        description: "Il tuo profilo personalizzato è stato salvato",
+        title: "Bolla aggiornata!",
+        description: "La tua bolla personalizzata è stata aggiornata con successo",
       });
-      setIsEditing(false);
     } catch (error: any) {
       toast({
         title: "Errore",
-        description: "Impossibile salvare il profilo",
+        description: "Impossibile aggiornare la bolla",
         variant: "destructive",
       });
     } finally {
@@ -179,61 +184,35 @@ export const UserProfileDialog = ({ userProfile, userId }: UserProfileDialogProp
           </DialogTitle>
         </DialogHeader>
         
-        <Tabs defaultValue="profile" className="w-full">
+        <Tabs defaultValue="bubble" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="profile">Profilazione</TabsTrigger>
+            <TabsTrigger value="bubble">La mia bolla</TabsTrigger>
             <TabsTrigger value="feeds">Giornali</TabsTrigger>
           </TabsList>
           
-          <TabsContent value="profile" className="space-y-4">
+          <TabsContent value="bubble" className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              L'AI utilizza questa descrizione per selezionare articoli su misura per te:
+              L'AI analizza i tuoi click per creare una descrizione sempre più accurata dei tuoi interessi. Puoi modificarla direttamente:
             </p>
             
-            {isEditing ? (
-              <div className="space-y-4">
-                <Textarea
-                  value={customProfile}
-                  onChange={(e) => setCustomProfile(e.target.value)}
-                  placeholder="Descrivi i tuoi interessi e il tipo di notizie che preferisci..."
-                  className="min-h-[120px]"
-                />
-                <div className="flex gap-2">
-                  <Button onClick={saveCustomProfile} disabled={isSaving}>
-                    {isSaving ? "Salvataggio..." : "Salva"}
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => {
-                      setIsEditing(false);
-                      loadCustomProfile();
-                    }}
-                  >
-                    Annulla
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <>
-                {displayProfile ? (
-                  <div className="p-4 bg-muted/50 rounded-lg border border-border">
-                    <p className="text-sm leading-relaxed">{displayProfile}</p>
-                  </div>
-                ) : (
-                  <div className="p-4 bg-muted/50 rounded-lg border border-border">
-                    <p className="text-sm leading-relaxed text-muted-foreground">
-                      Non abbiamo ancora abbastanza dati per creare il tuo profilo. Continua a leggere articoli per permetterci di conoscerti meglio!
-                    </p>
-                  </div>
-                )}
-                <Button onClick={() => setIsEditing(true)} variant="outline" className="w-full">
-                  {customProfile ? "Modifica profilo" : "Crea profilo personalizzato"}
-                </Button>
-              </>
-            )}
+            <div className="space-y-4">
+              <Textarea
+                value={customProfile || displayProfile || ""}
+                onChange={(e) => setCustomProfile(e.target.value)}
+                placeholder="L'AI sta imparando i tuoi interessi... Clicca più articoli per creare la tua bolla personalizzata, oppure scrivila tu stesso qui."
+                className="min-h-[150px]"
+              />
+              <Button 
+                onClick={saveCustomProfile} 
+                disabled={isSaving}
+                className="w-full"
+              >
+                {isSaving ? "Aggiornamento..." : "Aggiorna bolla"}
+              </Button>
+            </div>
             
             <p className="text-xs text-muted-foreground">
-              Più articoli leggi, più l'AI impara a selezionare contenuti su misura per te.
+              Più articoli leggi, più l'AI affina la tua bolla. Puoi sempre modificarla manualmente per guidare meglio l'AI nella selezione dei contenuti.
             </p>
           </TabsContent>
           
