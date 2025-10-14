@@ -226,6 +226,18 @@ const Dashboard = () => {
           </div>
         </div>
 
+        {/* Profilo AI Utente - La Bolla */}
+        {userProfile && (
+          <div className="mb-8 p-6 bg-muted/50 rounded-lg border-2 border-primary/20">
+            <h2 className="text-xl font-heading font-bold mb-3 text-primary">
+              La tua Bolla
+            </h2>
+            <p className="text-sm leading-relaxed text-foreground/90 italic">
+              {userProfile}
+            </p>
+          </div>
+        )}
+
         {generating ? (
           <div className="text-center py-20">
             <RefreshCw className="w-12 h-12 animate-spin mx-auto mb-4 text-muted-foreground" />
