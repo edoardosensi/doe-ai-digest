@@ -4,13 +4,30 @@ import { supabase } from "@/integrations/supabase/client";
 import { Navbar } from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Loader2, ChevronDown, ChevronRight, Newspaper } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Loader2, ChevronDown, ChevronRight, Newspaper, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const AVAILABLE_SECTIONS = [
   "Politica",
@@ -42,6 +59,11 @@ const Sections = () => {
   const [feedsBySection, setFeedsBySection] = useState<Record<string, RssFeed[]>>({});
   const [feedPreferences, setFeedPreferences] = useState<Record<string, boolean>>({});
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
+  const [showAddFeed, setShowAddFeed] = useState(false);
+  const [newFeedName, setNewFeedName] = useState("");
+  const [newFeedUrl, setNewFeedUrl] = useState("");
+  const [newFeedSection, setNewFeedSection] = useState("");
+  const [addingFeed, setAddingFeed] = useState(false);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -115,7 +137,7 @@ const Sections = () => {
 
   const loadFeeds = async (userId: string) => {
     try {
-      // Load all RSS feeds grouped by section
+      // Load default RSS feeds
       const { data: feedsData, error: feedsError } = await supabase
         .from('rss_feeds')
         .select('*')
@@ -123,10 +145,35 @@ const Sections = () => {
 
       if (feedsError) throw feedsError;
 
+      // Load user's custom RSS feeds
+      const { data: userFeedsData, error: userFeedsError } = await supabase
+        .from('user_rss_feeds')
+        .select('*')
+        .eq('user_id', userId);
+
+      if (userFeedsError) throw userFeedsError;
+
+      // Combine both default and user feeds
+      const allFeeds = [...(feedsData || [])];
+      
+      // Add user feeds (converting to same format)
+      userFeedsData?.forEach((userFeed) => {
+        allFeeds.push({
+          id: userFeed.id,
+          name: userFeed.name,
+          url: userFeed.url,
+          section_name: '', // User feeds don't have sections initially
+          is_default: false,
+          enabled: userFeed.enabled,
+          created_at: userFeed.created_at,
+          updated_at: null
+        });
+      });
+
       // Group feeds by section
       const grouped: Record<string, RssFeed[]> = {};
       const defaultExpanded: Record<string, boolean> = {};
-      feedsData?.forEach((feed) => {
+      allFeeds.forEach((feed) => {
         if (feed.section_name) {
           if (!grouped[feed.section_name]) {
             grouped[feed.section_name] = [];
@@ -250,6 +297,55 @@ const Sections = () => {
     }
   };
 
+  const handleAddFeed = async () => {
+    if (!user || !newFeedName || !newFeedUrl || !newFeedSection) {
+      toast({
+        title: "Errore",
+        description: "Compila tutti i campi",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setAddingFeed(true);
+    try {
+      const { data, error } = await supabase
+        .from('user_rss_feeds')
+        .insert({
+          user_id: user.id,
+          name: newFeedName,
+          url: newFeedUrl,
+          enabled: true
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Refresh feeds
+      await loadFeeds(user.id);
+      
+      setShowAddFeed(false);
+      setNewFeedName("");
+      setNewFeedUrl("");
+      setNewFeedSection("");
+
+      toast({
+        title: "Feed aggiunto!",
+        description: "Il tuo feed RSS è stato aggiunto con successo",
+      });
+    } catch (error: any) {
+      console.error('Error adding feed:', error);
+      toast({
+        title: "Errore",
+        description: "Impossibile aggiungere il feed",
+        variant: "destructive",
+      });
+    } finally {
+      setAddingFeed(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -264,7 +360,69 @@ const Sections = () => {
       
       <main className="container mx-auto px-4 pt-24 pb-12">
         <div className="max-w-2xl mx-auto">
-          <h1 className="text-4xl font-bold mb-2">Le tue Sezioni</h1>
+          <div className="flex items-center justify-between mb-2">
+            <h1 className="text-4xl font-bold">Le tue Sezioni</h1>
+            <Dialog open={showAddFeed} onOpenChange={setShowAddFeed}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  Aggiungi Feed
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Aggiungi Feed RSS</DialogTitle>
+                  <DialogDescription>
+                    Aggiungi un nuovo feed RSS personalizzato
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="feed-name">Nome del giornale</Label>
+                    <Input
+                      id="feed-name"
+                      placeholder="Es. Il Mio Giornale"
+                      value={newFeedName}
+                      onChange={(e) => setNewFeedName(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="feed-url">URL del feed RSS</Label>
+                    <Input
+                      id="feed-url"
+                      type="url"
+                      placeholder="https://esempio.com/feed.rss"
+                      value={newFeedUrl}
+                      onChange={(e) => setNewFeedUrl(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="feed-section">Sezione</Label>
+                    <Select value={newFeedSection} onValueChange={setNewFeedSection}>
+                      <SelectTrigger id="feed-section">
+                        <SelectValue placeholder="Seleziona una sezione" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {AVAILABLE_SECTIONS.map((section) => (
+                          <SelectItem key={section} value={section}>
+                            {section}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex gap-2 justify-end">
+                    <Button variant="outline" onClick={() => setShowAddFeed(false)}>
+                      Annulla
+                    </Button>
+                    <Button onClick={handleAddFeed} disabled={addingFeed}>
+                      {addingFeed ? "Aggiunta..." : "Aggiungi"}
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
           <p className="text-muted-foreground mb-8">
             Personalizza le sezioni che vuoi vedere nella tua dashboard
           </p>
