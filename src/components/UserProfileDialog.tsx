@@ -1,6 +1,6 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
 import { Button } from "./ui/button";
-import { Circle, Plus, X, Newspaper, ToggleLeft, ToggleRight } from "lucide-react";
+import { Circle, Plus, X, Newspaper, ToggleLeft, ToggleRight, User } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -38,10 +38,20 @@ export const UserProfileDialog = ({ userProfile, userId }: UserProfileDialogProp
   const [newFeedUrl, setNewFeedUrl] = useState("");
   const [newFeedName, setNewFeedName] = useState("");
   const [isAddingFeed, setIsAddingFeed] = useState(false);
+  
+  // Profile personal data
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
 
   useEffect(() => {
     loadCustomProfile();
     loadFeeds();
+    loadPersonalData();
   }, [userId]);
 
   // Sync customProfile with userProfile when it updates
@@ -56,10 +66,103 @@ export const UserProfileDialog = ({ userProfile, userId }: UserProfileDialogProp
       .from('profiles')
       .select('custom_profile')
       .eq('user_id', userId)
-      .single();
+      .maybeSingle();
     
     if (data?.custom_profile) {
       setCustomProfile(data.custom_profile);
+    }
+  };
+
+  const loadPersonalData = async () => {
+    // Load profile data
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('first_name, last_name')
+      .eq('user_id', userId)
+      .maybeSingle();
+    
+    if (profileData) {
+      setFirstName(profileData.first_name || "");
+      setLastName(profileData.last_name || "");
+    }
+
+    // Load user email
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user?.email) {
+      setEmail(user.email);
+    }
+  };
+
+  const updatePersonalData = async () => {
+    setIsUpdatingProfile(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ 
+          first_name: firstName,
+          last_name: lastName
+        })
+        .eq('user_id', userId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Profilo aggiornato!",
+        description: "I tuoi dati sono stati aggiornati con successo",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Errore",
+        description: "Impossibile aggiornare il profilo",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpdatingProfile(false);
+    }
+  };
+
+  const changePassword = async () => {
+    if (newPassword !== confirmPassword) {
+      toast({
+        title: "Errore",
+        description: "Le password non coincidono",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      toast({
+        title: "Errore",
+        description: "La password deve essere di almeno 6 caratteri",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsChangingPassword(true);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Password cambiata!",
+        description: "La tua password è stata aggiornata con successo",
+      });
+      
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (error: any) {
+      toast({
+        title: "Errore",
+        description: error.message || "Impossibile cambiare la password",
+        variant: "destructive",
+      });
+    } finally {
+      setIsChangingPassword(false);
     }
   };
 
@@ -236,13 +339,10 @@ export const UserProfileDialog = ({ userProfile, userId }: UserProfileDialogProp
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative">
-          <div className="flex items-center gap-0.5">
-            <Circle className="h-2.5 w-2.5 fill-primary/20 text-primary/60 stroke-[1.5]" />
-            <Circle className="h-3 w-3 fill-primary/30 text-primary/70 stroke-[1.5]" />
-            <Circle className="h-2 w-2 fill-primary/20 text-primary/60 stroke-[1.5]" />
-          </div>
-        </Button>
+        <div className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50">
+          <User className="mr-2 h-4 w-4" />
+          Il mio profilo
+        </div>
       </DialogTrigger>
       <DialogContent className="max-w-2xl max-h-[80vh]">
         <DialogHeader>
@@ -256,11 +356,90 @@ export const UserProfileDialog = ({ userProfile, userId }: UserProfileDialogProp
           </DialogTitle>
         </DialogHeader>
         
-        <Tabs defaultValue="bubble" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+        <Tabs defaultValue="profile" className="w-full">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="profile">Il mio profilo</TabsTrigger>
             <TabsTrigger value="bubble">La mia bolla</TabsTrigger>
             <TabsTrigger value="feeds">Giornali</TabsTrigger>
           </TabsList>
+          
+          <TabsContent value="profile" className="space-y-4">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="firstName">Nome</Label>
+                <Input
+                  id="firstName"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  placeholder="Il tuo nome"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="lastName">Cognome</Label>
+                <Input
+                  id="lastName"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  placeholder="Il tuo cognome"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  value={email}
+                  disabled
+                  className="bg-muted"
+                />
+              </div>
+              
+              <Button 
+                onClick={updatePersonalData} 
+                disabled={isUpdatingProfile}
+                className="w-full"
+              >
+                {isUpdatingProfile ? "Aggiornamento..." : "Aggiorna dati"}
+              </Button>
+              
+              <div className="pt-4 border-t">
+                <h3 className="text-sm font-medium mb-3">Cambia Password</h3>
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="newPassword">Nuova Password</Label>
+                    <Input
+                      id="newPassword"
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Minimo 6 caratteri"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="confirmPassword">Conferma Password</Label>
+                    <Input
+                      id="confirmPassword"
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Ripeti la password"
+                    />
+                  </div>
+                  
+                  <Button 
+                    onClick={changePassword} 
+                    disabled={isChangingPassword || !newPassword || !confirmPassword}
+                    variant="secondary"
+                    className="w-full"
+                  >
+                    {isChangingPassword ? "Cambiamento..." : "Cambia password"}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </TabsContent>
           
           <TabsContent value="bubble" className="space-y-4">
             <p className="text-sm text-muted-foreground">

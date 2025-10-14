@@ -55,8 +55,10 @@ export type Database = {
           created_at: string | null
           custom_profile: string | null
           display_name: string | null
+          first_name: string | null
           id: string
           interests: string | null
+          last_name: string | null
           updated_at: string | null
           user_id: string
         }
@@ -64,8 +66,10 @@ export type Database = {
           created_at?: string | null
           custom_profile?: string | null
           display_name?: string | null
+          first_name?: string | null
           id?: string
           interests?: string | null
+          last_name?: string | null
           updated_at?: string | null
           user_id: string
         }
@@ -73,8 +77,10 @@ export type Database = {
           created_at?: string | null
           custom_profile?: string | null
           display_name?: string | null
+          first_name?: string | null
           id?: string
           interests?: string | null
+          last_name?: string | null
           updated_at?: string | null
           user_id?: string
         }

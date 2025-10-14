@@ -47,7 +47,6 @@ export const Navbar = ({ user, userProfile }: NavbarProps) => {
               <Button variant="ghost" asChild>
                 <Link to="/sections">Sezioni</Link>
               </Button>
-              <UserProfileDialog userProfile={userProfile} userId={user.id} />
               <ClickedArticlesDialog userId={user.id} />
               <SavedArticlesDialog userId={user.id} />
               <DropdownMenu>
@@ -57,6 +56,7 @@ export const Navbar = ({ user, userProfile }: NavbarProps) => {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
+                  <UserProfileDialog userProfile={userProfile} userId={user.id} />
                   <DropdownMenuItem onClick={handleLogout}>
                     <LogOut className="mr-2 h-4 w-4" />
                     Esci
