@@ -110,10 +110,10 @@ export const BubbleDialog = ({ userId }: BubbleDialogProps) => {
               📝 Esempi di personalizzazione:
             </p>
             <ul className="list-disc list-inside text-sm space-y-1">
-              <li>"Voglio solo articoli su Matteo Renzi e politica italiana"</li>
-              <li>"Nessun articolo di sport, solo cultura e scienza"</li>
-              <li>"Solo analisi approfondite, no breaking news"</li>
-              <li>"Preferisco fonti internazionali come NYT e BBC"</li>
+              <li>"Voglio solo articoli su un tema specifico"</li>
+              <li>"Escludi completamente determinate categorie"</li>
+              <li>"Preferisco solo analisi approfondite"</li>
+              <li>"Preferisco specifiche fonti giornalistiche"</li>
             </ul>
           </DialogDescription>
         </DialogHeader>
