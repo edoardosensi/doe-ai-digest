@@ -186,7 +186,6 @@ const Dashboard = () => {
   }
 
   const categorizedArticles = categorizeArticles();
-  const categories = ['Politica', 'Politica estera', 'Sport', 'Cultura'];
 
   return (
     <div className="min-h-screen bg-background">
@@ -231,8 +230,8 @@ const Dashboard = () => {
           </div>
         ) : articles.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8 items-start">
-            {categories.map((category) => {
-              const categoryArticles = categorizedArticles[category];
+            {enabledSections.map((category) => {
+              const categoryArticles = categorizedArticles[category] || [];
               
               return (
                 <div key={category} className="flex flex-col">
